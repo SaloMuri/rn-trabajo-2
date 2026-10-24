@@ -1,0 +1,10 @@
+# TODO: fijar versiones exactas (pip freeze) una vez que el entorno funcione.
+numpy
+pandas
+scikit-learn
+scipy
+matplotlib
+pyyaml
+torch
+streamlit
+pytest
