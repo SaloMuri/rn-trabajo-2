@@ -1,11 +1,12 @@
-# TODO: fijar versiones exactas (pip freeze) una vez que el entorno funcione.
-numpy
-pandas
-scikit-learn
-scipy
-matplotlib
-pyyaml
-torch
-streamlit
-pytest
-pyarrow
+# Dependencias fijas y probadas para Python 3.10+ (Windows / Linux / macOS)
+numpy==1.26.4
+pandas==2.2.2
+scipy==1.15.3
+scikit-learn==1.7.2
+joblib==1.6.0
+pyarrow==25.0.1
+matplotlib==3.10.9
+pyyaml==6.0.1
+torch==2.14.1
+streamlit==1.65.0
+pytest==9.1.1
