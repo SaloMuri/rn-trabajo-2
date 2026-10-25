@@ -10,3 +10,4 @@ pyyaml==6.0.1
 torch==2.14.1
 streamlit==1.65.0
 pytest==9.1.1
+markdown==3.11.2
