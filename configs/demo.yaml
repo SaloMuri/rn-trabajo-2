@@ -1,1 +1,25 @@
-# TODO: modo demostración (<2 min): muestra de los datos, pocas épocas, pocas semillas
+# configs/demo.yaml
+# Modo demostración (< 2 minutos para sustentación en vivo)
+seed: 42
+demo_sample_frac: 0.15  # Usa el 15% de los datos (~30,000 registros) para correr en < 10 segundos
+
+baseline:
+  C: 1.0
+  max_iter: 500
+  class_weight: null
+
+mlp:
+  hidden_dims: [64, 32]
+  activation: "relu"
+  dropout: 0.15
+  use_batchnorm: true
+  lr: 0.001
+  weight_decay: 0.0001
+  batch_size: 2048
+  epochs: 5
+  patience: 3
+
+scorecard:
+  base_score: 600.0
+  base_odds: 19.0
+  pdo: 20.0
