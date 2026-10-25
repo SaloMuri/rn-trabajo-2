@@ -28,7 +28,7 @@ def encode_pd_target(loan_status: pd.Series) -> pd.Series:
     Retorna una serie con valores {0.0, 1.0, NaN}.
     """
     cleaned = loan_status.astype(str).str.strip()
-    return cleaned.map(PD_STATUS_MAP)
+    return cleaned.map(PD_STATUS_MAP) 
 
 
 def filter_valid_pd_records(df: pd.DataFrame, status_col: str = "loan_status") -> pd.DataFrame:

@@ -1,1 +1,26 @@
-# TODO: parámetros de la Parte 1 (arquitectura, activación, regularización, optimizador, lr, épocas, scorecard: puntaje base, odds, PDO)
+# configs/pd.yaml
+seed: 42
+
+# Modelo de referencia: Regresión Logística
+baseline:
+  C: 1.0                 # Inverso de la fuerza de regularización L2
+  max_iter: 1000
+  class_weight: null     # null mantiene las probabilidades calibradas a la tasa base real
+
+# Red Neuronal: Perceptrón Multicapa (MLP)
+mlp:
+  hidden_dims: [128, 64, 32]
+  activation: "relu"     # Opciones: relu, gelu, selu, tanh
+  dropout: 0.25
+  use_batchnorm: true
+  lr: 0.001
+  weight_decay: 0.0001   # Regularización L2 (AdamW)
+  batch_size: 1024
+  epochs: 30
+  patience: 5            # Épocas de espera para Early Stopping en validación
+
+# Parámetros de la Scorecard continua
+scorecard:
+  base_score: 600.0      # Puntaje de referencia (P0)
+  base_odds: 19.0        # Odds Bueno:Malo de referencia (19:1 equivale a PD = 5%)
+  pdo: 20.0              # Puntos para duplicar las odds de buen pagador

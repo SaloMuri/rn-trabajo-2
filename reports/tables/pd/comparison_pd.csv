@@ -1,0 +1,3 @@
+Modelo,Parámetros,Tiempo_s,Val_AUC,Test_AUC,Test_Gini,Test_KS,Test_Brier
+Regresión Logística (Baseline),39,3.89,0.7087,0.6899,0.3799,0.2829,0.1756
+Perceptrón Multicapa (MLP),15809,93.5,0.7165,0.6983,0.3966,0.2923,0.1731
