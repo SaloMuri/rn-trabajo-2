@@ -5,12 +5,16 @@ Imprime registros iniciales, finales, variables y periodo temporal.
 
 import os
 import re
+import sys
+from pathlib import Path
+
+# Esto le enseña a Python dónde está la carpeta 'src' automáticamente en Windows/Mac/Linux
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import yaml
 import numpy as np
 import pandas as pd
 from creditrisk.data.targets import filter_valid_pd_records
-
-
 def clean_term(series: pd.Series) -> pd.Series:
     """Convierte ' 36 months' o '60 months' en entero (36 o 60)."""
     return series.astype(str).str.extract(r"(\d+)")[0].astype(float)
@@ -128,8 +132,20 @@ def build_pd_table(df_raw: pd.DataFrame) -> pd.DataFrame:
 
     return df_clean
 
+def save_df(df: pd.DataFrame, path_no_ext: str, fmt: str) -> str:
+    """Guarda el DataFrame en formato csv o parquet según la configuración."""
+    full_path = f"{path_no_ext}.{fmt}"
+    if fmt == "parquet":
+        df.to_parquet(full_path, index=False)
+    else:
+        df.to_csv(full_path, index=False)
+    return full_path
+
 
 def main(config_path: str = "configs/base.yaml") -> None:
+    from creditrisk.data.splits import temporal_train_val_test_split
+    from creditrisk.data.features import fit_and_save_preprocessor
+
     with open(config_path, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
@@ -137,6 +153,7 @@ def main(config_path: str = "configs/base.yaml") -> None:
     out_dir = cfg["paths"]["processed_pd_dir"]
     out_fmt = cfg["paths"].get("output_format", "csv")
     os.makedirs(out_dir, exist_ok=True)
+    os.makedirs("models/pd", exist_ok=True)
 
     print(f"[INFO] Cargando dataset original desde: {raw_path} ...")
     df_raw = pd.read_csv(raw_path, low_memory=False)
@@ -145,28 +162,44 @@ def main(config_path: str = "configs/base.yaml") -> None:
     df_clean = build_pd_table(df_raw)
     n_clean_rows, n_clean_cols = df_clean.shape
 
+    # Partición temporal Out-of-Time
+    split_cfg = cfg["temporal_split"]
+    train_df, val_df, test_df = temporal_train_val_test_split(
+        df_clean,
+        date_col="issue_d_dt",
+        train_end=split_cfg["train_end"],
+        val_end=split_cfg["val_end"],
+    )
+
+    # Ajustar y guardar el preprocesador único (fit SOLO en train)
+    _, feat_names = fit_and_save_preprocessor(
+        train_df, cfg["features_pd"], save_path="models/pd/preprocessor.joblib"
+    )
+
+    # Guardar particiones y muestra de referencia para la App Web
+    save_df(train_df, os.path.join(out_dir, "train"), out_fmt)
+    save_df(val_df, os.path.join(out_dir, "val"), out_fmt)
+    save_df(test_df, os.path.join(out_dir, "test"), out_fmt)
+
+    ref_sample = train_df.sample(n=min(10000, len(train_df)), random_state=cfg["seed"])
+    save_df(ref_sample, os.path.join(out_dir, "reference_dist"), out_fmt)
+
     min_date = df_clean["issue_d_dt"].min().strftime("%Y-%m")
     max_date = df_clean["issue_d_dt"].max().strftime("%Y-%m")
     bad_rate = df_clean["target_pd"].mean() * 100
 
-    # Reporte obligatorio en consola exigido por la guía
     print("=" * 65)
-    print("RESUMEN DE CONSTRUCCIÓN Y LIMPIEZA DEL DATASET (PARTE 1 - PD)")
+    print("RESUMEN DE CONSTRUCCIÓN Y PARTICIÓN TEMPORAL (PARTE 1 - PD)")
     print("=" * 65)
     print(f"Registros originales (raw)    : {n_raw_rows:,} filas x {n_raw_cols} columnas")
     print(f"Registros válidos (PD 0/1)    : {n_clean_rows:,} filas x {n_clean_cols} columnas")
-    print(f"Registros descartados (Current): {n_raw_rows - n_clean_rows:,} filas")
     print(f"Periodo de originación        : {min_date} a {max_date}")
-    print(f"Tasa global de incumplimiento : {bad_rate:.2f}% (Malos = 1)")
+    print(f"Tasa global de incumplimiento : {bad_rate:.2f}%")
+    print("-" * 65)
+    print(f"Train Set (<= {split_cfg['train_end']}) : {len(train_df):,} filas (PD: {train_df['target_pd'].mean()*100:.2f}%)")
+    print(f"Val Set   (<= {split_cfg['val_end']}) : {len(val_df):,} filas (PD: {val_df['target_pd'].mean()*100:.2f}%)")
+    print(f"Test Set  (>  {split_cfg['val_end']}) : {len(test_df):,} filas (PD: {test_df['target_pd'].mean()*100:.2f}%)")
+    print(f"Features tras One-Hot Encoding: {len(feat_names)} columnas")
     print("=" * 65)
-
-    out_file = os.path.join(out_dir, f"pd_clean.{out_fmt}")
-    if out_fmt == "parquet":
-        df_clean.to_parquet(out_file, index=False)
-    else:
-        df_clean.to_csv(out_file, index=False)
-    print(f"[OK] Tabla limpia guardada exitosamente en: {out_file}")
-
-
 if __name__ == "__main__":
     main()

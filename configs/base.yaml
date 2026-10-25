@@ -4,7 +4,7 @@ seed: 42
 paths:
   raw_csv: "data/raw/loan.csv"
   processed_pd_dir: "data/processed/pd"
-  output_format: "csv"  # Puedes cambiarlo a "parquet" si prefieres menor peso en Git
+  output_format: "parquet"  # Puedes cambiarlo a "parquet" si prefieres menor peso en Git
 
 # Fechas para la partición temporal (Out-of-Time)
 temporal_split:
@@ -15,18 +15,21 @@ temporal_split:
 # Variables estrictamente disponibles en el momento de la solicitud (Originación)
 features_pd:
   numeric:
-    - loan_amnt
-    - int_rate
-    - installment
-    - annual_inc
-    - dti
-    - delinq_2yrs
-    - inq_last_6mths
-    - open_acc
-    - pub_rec
-    - revol_bal
-    - revol_util
-    - total_acc
+    - loan_amnt # Monto del préstamo
+    - int_rate # Tasa de interés
+    - installment # Cuota mensual
+    - annual_inc # Ingreso anual
+    - dti # Relación deuda-ingreso
+    - delinq_2yrs # Número de veces que el prestatario ha estado en mora en los últimos 2 años
+    - inq_last_6mths # Número de consultas de crédito en los últimos 6 meses
+    - open_acc # Número de cuentas abiertas en el historial de crédito
+    - pub_rec # Número de registros públicos negativos (como quiebras) en el historial de crédito
+    - revol_bal # Balance de la línea de crédito rotativa
+    - revol_util # Porcentaje de la línea de crédito rotativa que se está utilizando
+    - total_acc # Número total de cuentas en el historial de crédito
+    #-----------------------------------------
+    #           Variables derivadas
+    #-----------------------------------------
     - credit_history_months  # Calculada como (issue_d - earliest_cr_line)
     - has_prev_delinq        # Bandera 1/0 creada a partir de mths_since_last_delinq
   categorical_ordinal:
