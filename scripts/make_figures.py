@@ -31,15 +31,15 @@ def plot_eda_hypotheses(train_df: pd.DataFrame, out_dir: str) -> None:
     """Figura 1: Panel de validación visual de las 3 hipótesis en el análisis descriptivo."""
     fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
 
-    # Panel A: Hipótesis 1 - Tasa de incumplimiento por Grado (A=1 ... G=7)
-    grade_labels = {1: "A", 2: "B", 3: "C", 4: "D", 5: "E", 6: "F", 7: "G"}
-    df_g = train_df.dropna(subset=["grade"]).copy()
-    df_g["grade_letter"] = df_g["grade"].astype(int).map(grade_labels)
-    grade_pd = df_g.groupby("grade_letter")["target_pd"].mean() * 100
-    axes[0].bar(grade_pd.index, grade_pd.values, color="#1f77b4", edgecolor="black", alpha=0.85)
-    axes[0].set_title("H1: Tasa de Impago por Grado Crediticio")
-    axes[0].set_xlabel("Grado asignado en originación (A = menor riesgo, G = mayor)")
-    axes[0].set_ylabel("Tasa de Incumplimiento (%)")
+    # Panel A: NUEVA Hipótesis 1 - Tasa de interés asignada según variable nominal (purpose)
+    top_purposes_rate = train_df["purpose"].value_counts().head(7).index
+    df_rate = train_df[train_df["purpose"].isin(top_purposes_rate)]
+    purp_rate = df_rate.groupby("purpose")["int_rate"].mean().sort_values(ascending=True)
+    
+    axes[0].barh(purp_rate.index, purp_rate.values, color="#1f77b4", edgecolor="black", alpha=0.85)
+    axes[0].set_title("H1: Tasa de Interés Promedio por Propósito")
+    axes[0].set_xlabel("Tasa de Interés Promedio (%)")
+    axes[0].set_ylabel("Propósito del Crédito")
 
     # Panel B: Hipótesis 2 - Interacción Plazo (36 vs 60 meses) y Cuartiles de DTI
     df_dti = train_df.dropna(subset=["dti", "term"]).copy()
@@ -50,9 +50,9 @@ def plot_eda_hypotheses(train_df: pd.DataFrame, out_dir: str) -> None:
     if 36.0 in piv.columns and 60.0 in piv.columns:
         axes[1].bar(x - width / 2, piv[36.0], width, label="36 meses", color="#2ca02c", alpha=0.85)
         axes[1].bar(x + width / 2, piv[60.0], width, label="60 meses", color="#d62728", alpha=0.85)
-        axes[1].set_xticks(x)
-        axes[1].set_xticklabels(piv.index)
-        axes[1].legend(title="Plazo (term)")
+    axes[1].set_xticks(x)
+    axes[1].set_xticklabels(piv.index)
+    axes[1].legend(title="Plazo (term)")
     axes[1].set_title("H2: Impago según Cuartil de DTI y Plazo")
     axes[1].set_xlabel("Cuartiles de Relación Deuda-Ingreso (DTI)")
     axes[1].set_ylabel("Tasa de Incumplimiento (%)")
@@ -62,7 +62,7 @@ def plot_eda_hypotheses(train_df: pd.DataFrame, out_dir: str) -> None:
     df_p = train_df[train_df["purpose"].isin(top_purposes)]
     purp_pd = (df_p.groupby("purpose")["target_pd"].mean() * 100).sort_values(ascending=True)
     axes[2].barh(purp_pd.index, purp_pd.values, color="#ff7f0e", edgecolor="black", alpha=0.85)
-    axes[2].set_title("H3: Tasa de Impago por Propósito del Crédito")
+    axes[2].set_title("H3: Tasa de Impago por Propósito")
     axes[2].set_xlabel("Tasa de Incumplimiento (%)")
 
     plt.tight_layout()
