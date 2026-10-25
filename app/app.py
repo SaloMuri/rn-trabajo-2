@@ -63,6 +63,24 @@ def get_risk_tier(score: float):
         return "🟡 Riesgo Moderado — Revisión Analista", "#ff7f0e"
     return "🔴 Riesgo Alto — Rechazo / Garantía Adicional", "#d62728"
 
+def estimate_grade_and_rate(dti: float, revol_util: float, delinq_2yrs: int, inq_6m: int, pub_rec: int, term: int):
+    """
+    Heurística de pre-cotización (Pricing Engine) calibrada con las medias históricas
+    de Lending Club para usuarios que aún no conocen su Grado ni Tasa asignada.
+    """
+    risk_points = 0.0
+    risk_points += max(0.0, (dti - 10.0) * 0.08)
+    risk_points += max(0.0, (revol_util - 30.0) * 0.03)
+    risk_points += delinq_2yrs * 1.2
+    risk_points += inq_6m * 0.45
+    risk_points += pub_rec * 1.5
+    if term == 60:
+        risk_points += 1.1
+
+    grade_est = int(np.clip(np.round(1.0 + risk_points), 1, 7))
+    # Tasas promedio históricas por grado en Lending Club (A -> ~7.2%, G -> ~25.8%)
+    typical_rates = {1: 7.2, 2: 10.5, 3: 13.6, 4: 16.8, 5: 19.9, 6: 23.4, 7: 25.8}
+    return grade_est, typical_rates[grade_est]
 
 def main():
     st.title("🏦 Simulador de Riesgo Crediticio y Scorecard (Parte 1 — PD)")
