@@ -46,10 +46,19 @@ def main(
     os.makedirs("models/pd", exist_ok=True)
     os.makedirs("reports/tables/pd", exist_ok=True)
 
+    is_demo = "demo_sample_frac" in pd_cfg
+    sample_frac = float(pd_cfg.get("demo_sample_frac", 1.0))
+
     print("[1/4] Cargando particiones temporales y preprocesador único...")
     train_df = load_split_df(proc_dir, "train", fmt)
     val_df = load_split_df(proc_dir, "val", fmt)
     test_df = load_split_df(proc_dir, "test", fmt)
+
+    if is_demo and 0.0 < sample_frac < 1.0:
+        print(f"[MODO DEMO] Usando muestra rápida del {sample_frac*100:.0f}% de los datos (< 2 min)...")
+        train_df = train_df.sample(frac=sample_frac, random_state=seed)
+        val_df = val_df.sample(frac=sample_frac, random_state=seed)
+        test_df = test_df.sample(frac=sample_frac, random_state=seed)
 
     preprocessor = joblib.load("models/pd/preprocessor.joblib")
 
@@ -62,9 +71,7 @@ def main(
     X_test = preprocessor.transform(test_df).astype(np.float32)
     y_test = test_df["target_pd"].values.astype(np.int64)
 
-    # -------------------------------------------------------------------------
     # 1. ENTRENAMIENTO REGRESIÓN LOGÍSTICA (BASELINE)
-    # -------------------------------------------------------------------------
     print("\n[2/4] Entrenando Modelo de Referencia (Regresión Logística)...")
     t0 = time.time()
     lr_cfg = pd_cfg["baseline"]
@@ -76,36 +83,32 @@ def main(
     )
     lr_model.fit(X_train, y_train)
     lr_time = time.time() - t0
-    lr_model.save("models/pd/logreg_baseline.joblib")
+    if not is_demo:
+        lr_model.save("models/pd/logreg_baseline.joblib")
 
     lr_val_probs = lr_model.predict_proba(X_val)
     lr_test_probs = lr_model.predict_proba(X_test)
     lr_val_m = evaluate_pd_metrics(y_val, lr_val_probs)
     lr_test_m = evaluate_pd_metrics(y_test, lr_test_probs)
 
-    # -------------------------------------------------------------------------
     # 2. ENTRENAMIENTO PERCEPTRÓN MULTICAPA (MLP)
-    # -------------------------------------------------------------------------
     print("\n[3/4] Entrenando Red Neuronal (TabularMLP)...")
     t0 = time.time()
     mlp_model, history = train_pd_mlp(
         X_train, y_train, X_val, y_val, pd_cfg["mlp"], verbose=True
     )
     mlp_time = time.time() - t0
-    save_mlp_checkpoint(mlp_model, "models/pd/mlp_best.pt")
-
-    # Guardar historial de pérdida por época para las figuras del reporte
-    pd.DataFrame(history).to_csv("reports/tables/pd/mlp_training_history.csv", index=False)
+    if not is_demo:
+        save_mlp_checkpoint(mlp_model, "models/pd/mlp_best.pt")
+        pd.DataFrame(history).to_csv("reports/tables/pd/mlp_training_history.csv", index=False)
 
     mlp_val_probs = predict_proba_mlp(mlp_model, X_val)
     mlp_test_probs = predict_proba_mlp(mlp_model, X_test)
     mlp_val_m = evaluate_pd_metrics(y_val, mlp_val_probs)
     mlp_test_m = evaluate_pd_metrics(y_test, mlp_test_probs)
 
-    # -------------------------------------------------------------------------
     # 3. CONSTRUCCIÓN DE LA SCORECARD Y DISTRIBUCIÓN DE REFERENCIA
-    # -------------------------------------------------------------------------
-    print("\n[4/4] Configurando Scorecard y guardando distribución de puntajes...")
+    print("\n[4/4] Configurando Scorecard y evaluando métricas...")
     sc_cfg = pd_cfg["scorecard"]
     scorecard = CreditScorecard(
         base_score=float(sc_cfg["base_score"]),
@@ -114,33 +117,31 @@ def main(
     )
     test_scores = scorecard.pd_to_score(mlp_test_probs)
 
-    # Guardar configuración y cuantiles poblacionales para la App Web
-    scorecard_meta = {
-        "base_score": scorecard.base_score,
-        "base_odds": scorecard.base_odds,
-        "pdo": scorecard.pdo,
-        "factor": scorecard.factor,
-        "offset": scorecard.offset,
-        "test_score_quantiles": {
-            str(q): float(np.quantile(test_scores, q))
-            for q in np.round(np.linspace(0.01, 0.99, 99), 2)
-        },
-    }
-    with open("models/pd/scorecard_config.json", "w", encoding="utf-8") as f:
-        json.dump(scorecard_meta, f, indent=2)
-
-    # Guardar predicciones en test para generar curvas ROC, KS y Calibración sin re-evaluar
-    preds_df = pd.DataFrame(
-        {
-            "y_true": y_test,
-            "prob_logreg": lr_test_probs,
-            "prob_mlp": mlp_test_probs,
-            "score_mlp": test_scores,
+    if not is_demo:
+        scorecard_meta = {
+            "base_score": scorecard.base_score,
+            "base_odds": scorecard.base_odds,
+            "pdo": scorecard.pdo,
+            "factor": scorecard.factor,
+            "offset": scorecard.offset,
+            "test_score_quantiles": {
+                str(q): float(np.quantile(test_scores, q))
+                for q in np.round(np.linspace(0.01, 0.99, 99), 2)
+            },
         }
-    )
-    preds_df.to_csv("reports/tables/pd/test_predictions.csv", index=False)
+        with open("models/pd/scorecard_config.json", "w", encoding="utf-8") as f:
+            json.dump(scorecard_meta, f, indent=2)
 
-    # Tabla resumen de comparación justa
+        preds_df = pd.DataFrame(
+            {
+                "y_true": y_test,
+                "prob_logreg": lr_test_probs,
+                "prob_mlp": mlp_test_probs,
+                "score_mlp": test_scores,
+            }
+        )
+        preds_df.to_csv("reports/tables/pd/test_predictions.csv", index=False)
+
     comparison_df = pd.DataFrame(
         [
             {
@@ -165,18 +166,11 @@ def main(
             },
         ]
     )
-    comparison_df.to_csv("reports/tables/pd/comparison_pd.csv", index=False)
+    out_csv = "reports/tables/pd/comparison_demo.csv" if is_demo else "reports/tables/pd/comparison_pd.csv"
+    comparison_df.to_csv(out_csv, index=False)
 
     print("\n" + "=" * 80)
     print("RESULTADOS DE COMPARACIÓN JUSTA (PARTE 1 - PD)")
     print("=" * 80)
     print(comparison_df.to_string(index=False))
     print("=" * 80)
-
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Ejecuta el experimento PD.")
-    parser.add_argument("--config", type=str, default="configs/pd.yaml", help="Ruta al archivo YAML de configuración PD o demo.")
-    args = parser.parse_args()
-    main(base_cfg_path="configs/base.yaml", pd_cfg_path=args.config)

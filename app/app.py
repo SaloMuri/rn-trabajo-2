@@ -2,13 +2,10 @@
 """Aplicación web: puntaje, probabilidad de incumplimiento, percentil y escenarios 'qué pasaría si'.
 Enlaces al reporte y al video.
 """
-
 import json
 import sys
 from pathlib import Path
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
 import joblib
 import numpy as np
 import pandas as pd
@@ -23,7 +20,6 @@ st.set_page_config(
     page_icon="🏦",
     layout="wide",
 )
-
 
 @st.cache_resource
 def load_artifacts():
@@ -86,7 +82,7 @@ def main():
     st.title("🏦 Simulador de Riesgo Crediticio y Scorecard (Parte 1 — PD)")
     st.markdown(
         "**Trabajo 2 — Redes Neuronales y Algoritmos Bioinspirados (UNAL Facultad de Minas)**  \n"
-        "🔗 [Reporte Técnico (Blog)](#) · 🎥 [Video Promocional](#) · 💻 [Repositorio GitHub](#)"
+        "🔗 [Reporte Técnico (Blog)](https://salomuri.github.io/rn-trabajo-2/blog/) · 🎥 [Video Promocional](#) · 💻 [Repositorio GitHub](https://github.com/SaloMuri/rn-trabajo-2.git)"
     )
     st.divider()
 
@@ -99,7 +95,7 @@ def main():
         )
         return
 
-    # -------------------------------------------------------------------------
+# -------------------------------------------------------------------------
     # BARRA LATERAL: PERFIL DEL SOLICITANTE EN ORIGINACIÓN
     # -------------------------------------------------------------------------
     st.sidebar.header("📋 Datos del Solicitante (Originación)")
@@ -108,12 +104,69 @@ def main():
     loan_amnt = st.sidebar.number_input("Monto solicitado (USD)", min_value=1000, max_value=40000, value=12000, step=500)
     term = st.sidebar.selectbox("Plazo del préstamo (meses)", options=[36, 60], index=0)
 
-    grade_map = {"A (Excelente)": 1, "B (Bueno)": 2, "C (Medio)": 3, "D (Moderado)": 4, "E (Riesgoso)": 5, "F (Alto Riesgo)": 6, "G (Crítico)": 7}
-    grade_label = st.sidebar.selectbox("Calificación crediticia inicial (Grado)", options=list(grade_map.keys()), index=2)
-    grade = grade_map[grade_label]
+    annual_inc = st.sidebar.number_input("Ingreso anual reportado (USD)", min_value=10000, max_value=500000, value=65000, step=2500)
+    dti = st.sidebar.slider("Relación Deuda-Ingreso mensual (DTI %)", min_value=0.0, max_value=60.0, value=18.0, step=0.5)
+    revol_util = st.sidebar.slider("Uso de cupo en tarjetas rotativas (%)", min_value=0.0, max_value=120.0, value=45.0, step=1.0)
+    revol_bal = st.sidebar.number_input("Saldo rotativo actual (USD)", min_value=0, max_value=200000, value=11000, step=500)
 
-    int_rate = st.sidebar.slider("Tasa de interés efectiva anual (%)", min_value=5.0, max_value=30.0, value=13.5, step=0.25)
+    home_ownership = st.sidebar.selectbox("Tipo de vivienda", options=["MORTGAGE", "RENT", "OWN", "OTHER"], index=1)
+    purpose = st.sidebar.selectbox(
+        "Propósito del préstamo",
+        options=[
+            "debt_consolidation",
+            "credit_card",
+            "home_improvement",
+            "other",
+            "major_purchase",
+            "small_business",
+            "car",
+            "medical",
+        ],
+        index=0,
+    )
+    verification_status = st.sidebar.selectbox(
+        "Estado de verificación de ingresos",
+        options=["Verified", "Source Verified", "Not Verified"],
+        index=1,
+    )
 
+    with st.sidebar.expander("⚙️ Historial crediticio detallado"):
+        emp_length = st.slider("Antigüedad laboral (años, 10 = 10+)", 0, 10, 5)
+        credit_history_years = st.slider("Antigüedad del historial crediticio (años)", 1, 40, 12)
+        open_acc = st.number_input("Líneas de crédito abiertas actualmente", 1, 50, 10)
+        total_acc = st.number_input("Total histórico de líneas de crédito", 1, 100, 22)
+        inq_last_6mths = st.slider("Consultas a central de riesgo (últimos 6 meses)", 0, 10, 1)
+        delinq_2yrs = st.slider("Moras >30 días en los últimos 2 años", 0, 10, 0)
+        pub_rec = st.slider("Registros públicos adversos (bancarrota/embargos)", 0, 5, 0)
+        has_prev_delinq = st.selectbox("¿Ha tenido alguna mora histórica?", options=[0, 1], format_func=lambda x: "Sí" if x == 1 else "No")
+
+    # -------------------------------------------------------------------------
+    # GESTIÓN INTELIGENTE DE GRADE E INT_RATE (PRE-COTIZACIÓN AUTOMÁTICA)
+    # -------------------------------------------------------------------------
+    auto_pricing = st.sidebar.checkbox(
+        "✨ Estimar Grado y Tasa automáticamente",
+        value=True,
+        help="Calcula tu grado y tasa según tu nivel de endeudamiento e historial si aún no tienes oferta del banco.",
+    )
+
+    if auto_pricing:
+        grade, int_rate = estimate_grade_and_rate(
+            dti=dti, revol_util=revol_util, delinq_2yrs=delinq_2yrs, 
+            inq_6m=inq_last_6mths, pub_rec=pub_rec, term=term
+        )
+        grade_letters = {1: "A (Excelente)", 2: "B (Bueno)", 3: "C (Medio)", 4: "D (Moderado)", 5: "E (Riesgoso)", 6: "F (Alto Riesgo)", 7: "G (Crítico)"}
+        st.sidebar.success(f"📌 **Grado estimado:** {grade_letters[grade]}  \n📈 **Tasa estimada:** {int_rate:.2f}%")
+    else:
+        grade_map = {"A (Excelente)": 1, "B (Bueno)": 2, "C (Medio)": 3, "D (Moderado)": 4, "E (Riesgoso)": 5, "F (Alto Riesgo)": 6, "G (Crítico)": 7}
+        grade_label = st.sidebar.selectbox("Calificación crediticia (Grado)", options=list(grade_map.keys()), index=2)
+        grade = grade_map[grade_label]
+        int_rate = st.sidebar.slider("Tasa de interés efectiva anual (%)", min_value=5.0, max_value=30.0, value=13.5, step=0.25)
+
+    # Cálculo financiero automático de la cuota mensual (installment)
+    r_monthly = (int_rate / 100.0) / 12.0
+    installment = float(loan_amnt * (r_monthly * (1 + r_monthly) ** term) / ((1 + r_monthly) ** term - 1))
+    st.sidebar.info(f"💵 **Cuota mensual estimada:** ${installment:,.2f} USD")
+    
     # Cálculo financiero automático de la cuota mensual (installment)
     r_monthly = (int_rate / 100.0) / 12.0
     installment = float(loan_amnt * (r_monthly * (1 + r_monthly) ** term) / ((1 + r_monthly) ** term - 1))

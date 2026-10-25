@@ -9,11 +9,13 @@ PD_STATUS_MAP = {
     # Buenos pagadores confirmados -> 0
     "Fully Paid": 0,
     "Does not meet the credit policy. Status: Fully Paid": 0,
+    "Does not meet the credit policy. Status:Fully Paid": 0,    
     # Malos pagadores confirmados -> 1
     "Charged Off": 1,
     "Default": 1,
     "Late (31-120 days)": 1,
     "Does not meet the credit policy. Status: Charged Off": 1,
+    "Does not meet the credit policy. Status:Charged Off": 1,
     # Sin certeza de comportamiento final -> NA (se excluyen del entrenamiento)
     "Current": np.nan,
     "Issued": np.nan,
