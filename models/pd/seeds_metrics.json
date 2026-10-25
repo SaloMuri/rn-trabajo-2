@@ -1,32 +1,32 @@
 {
   "n_seeds": 30,
-  "total_time_s": 1197.78,
+  "total_time_s": 1337.6,
   "n_parameters": 4801,
   "summary": [
     {
       "metrica": "AUC",
-      "media": 0.697,
+      "media": 0.6968,
       "desviacion_std": 0.0014,
-      "mejor": 0.6989,
-      "peor": 0.6939,
+      "mejor": 0.7002,
+      "peor": 0.6943,
       "n_semillas": 30,
       "parametros_mlp": 4801
     },
     {
       "metrica": "GINI",
-      "media": 0.394,
-      "desviacion_std": 0.0029,
-      "mejor": 0.3977,
-      "peor": 0.3878,
+      "media": 0.3937,
+      "desviacion_std": 0.0027,
+      "mejor": 0.4003,
+      "peor": 0.3887,
       "n_semillas": 30,
       "parametros_mlp": 4801
     },
     {
       "metrica": "KS",
-      "media": 0.2918,
-      "desviacion_std": 0.0035,
-      "mejor": 0.2982,
-      "peor": 0.2848,
+      "media": 0.2916,
+      "desviacion_std": 0.0024,
+      "mejor": 0.2957,
+      "peor": 0.2862,
       "n_semillas": 30,
       "parametros_mlp": 4801
     },
@@ -34,8 +34,8 @@
       "metrica": "BRIER",
       "media": 0.1732,
       "desviacion_std": 0.0003,
-      "mejor": 0.1727,
-      "peor": 0.1736,
+      "mejor": 0.1726,
+      "peor": 0.1737,
       "n_semillas": 30,
       "parametros_mlp": 4801
     }

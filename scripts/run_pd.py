@@ -174,3 +174,11 @@ def main(
     print("=" * 80)
     print(comparison_df.to_string(index=False))
     print("=" * 80)
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Ejecuta el experimento PD.")
+    parser.add_argument("--config", type=str, default="configs/pd.yaml", help="Ruta al archivo YAML de configuración PD o demo.")
+    args = parser.parse_args()
+    main(base_cfg_path="configs/base.yaml", pd_cfg_path=args.config)
