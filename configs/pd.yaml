@@ -9,15 +9,15 @@ baseline:
 
 # Red Neuronal: Perceptrón Multicapa (MLP)
 mlp:
-  hidden_dims: [128, 64, 32]
+  hidden_dims: [64, 32]
   activation: "relu"     # Opciones: relu, gelu, selu, tanh
-  dropout: 0.25
+  dropout: 0.15
   use_batchnorm: true
   lr: 0.001
   weight_decay: 0.0001   # Regularización L2 (AdamW)
-  batch_size: 1024
-  epochs: 30
-  patience: 5            # Épocas de espera para Early Stopping en validación
+  batch_size: 2048
+  epochs: 20
+  patience: 4            # Épocas de espera para Early Stopping en validación
 
 # Parámetros de la Scorecard continua
 scorecard:

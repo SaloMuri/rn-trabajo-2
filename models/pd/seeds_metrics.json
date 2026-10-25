@@ -1,0 +1,43 @@
+{
+  "n_seeds": 30,
+  "total_time_s": 1197.78,
+  "n_parameters": 4801,
+  "summary": [
+    {
+      "metrica": "AUC",
+      "media": 0.697,
+      "desviacion_std": 0.0014,
+      "mejor": 0.6989,
+      "peor": 0.6939,
+      "n_semillas": 30,
+      "parametros_mlp": 4801
+    },
+    {
+      "metrica": "GINI",
+      "media": 0.394,
+      "desviacion_std": 0.0029,
+      "mejor": 0.3977,
+      "peor": 0.3878,
+      "n_semillas": 30,
+      "parametros_mlp": 4801
+    },
+    {
+      "metrica": "KS",
+      "media": 0.2918,
+      "desviacion_std": 0.0035,
+      "mejor": 0.2982,
+      "peor": 0.2848,
+      "n_semillas": 30,
+      "parametros_mlp": 4801
+    },
+    {
+      "metrica": "BRIER",
+      "media": 0.1732,
+      "desviacion_std": 0.0003,
+      "mejor": 0.1727,
+      "peor": 0.1736,
+      "n_semillas": 30,
+      "parametros_mlp": 4801
+    }
+  ]
+}
