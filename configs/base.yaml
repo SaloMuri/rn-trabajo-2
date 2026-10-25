@@ -1,1 +1,39 @@
-# TODO: parámetros comunes (semilla, rutas, listas de variables, fechas de la partición temporal)
+# configs/base.yaml
+seed: 42
+
+paths:
+  raw_csv: "data/raw/loan.csv"
+  processed_pd_dir: "data/processed/pd"
+  output_format: "csv"  # Puedes cambiarlo a "parquet" si prefieres menor peso en Git
+
+# Fechas para la partición temporal (Out-of-Time)
+temporal_split:
+  train_end: "2014-06-01"   # Todo hasta junio 2014 -> Entrenamiento
+  val_end: "2014-12-01"     # Julio 2014 a Dic 2014 -> Validación (Early stopping / Hiperparámetros)
+                            # Enero 2015 en adelante -> Test Out-of-Time
+
+# Variables estrictamente disponibles en el momento de la solicitud (Originación)
+features_pd:
+  numeric:
+    - loan_amnt
+    - int_rate
+    - installment
+    - annual_inc
+    - dti
+    - delinq_2yrs
+    - inq_last_6mths
+    - open_acc
+    - pub_rec
+    - revol_bal
+    - revol_util
+    - total_acc
+    - credit_history_months  # Calculada como (issue_d - earliest_cr_line)
+    - has_prev_delinq        # Bandera 1/0 creada a partir de mths_since_last_delinq
+  categorical_ordinal:
+    - term                   # "36 months" -> 36, "60 months" -> 60
+    - emp_length             # "< 1 year" -> 0 ... "10+ years" -> 10
+    - grade                  # "A" -> 1 ... "G" -> 7
+  categorical_nominal:
+    - home_ownership         # RENT, MORTGAGE, OWN, OTHER
+    - verification_status    # Verified, Source Verified, Not Verified
+    - purpose                # debt_consolidation, credit_card, small_business, etc.
