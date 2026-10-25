@@ -99,17 +99,51 @@ def main():
     # BARRA LATERAL: PERFIL DEL SOLICITANTE EN ORIGINACIÓN
     # -------------------------------------------------------------------------
     st.sidebar.header("📋 Datos del Solicitante (Originación)")
-    st.sidebar.caption("Ingresa las características conocidas al momento de pedir el crédito:")
+    st.sidebar.caption(
+        "Ingresa las características conocidas al momento de pedir el crédito:"
+    )
 
-    loan_amnt = st.sidebar.number_input("Monto solicitado (USD)", min_value=1000, max_value=40000, value=12000, step=500)
-    term = st.sidebar.selectbox("Plazo del préstamo (meses)", options=[36, 60], index=0)
+    loan_amnt = st.sidebar.number_input(
+        "Monto solicitado (USD)", min_value=1000, max_value=40000, value=12000, step=500, key="sidebar_loan_amnt"
+    )
+    term = st.sidebar.selectbox("Plazo del préstamo (meses)", options=[36, 60], index=0, key="sidebar_term")
 
-    annual_inc = st.sidebar.number_input("Ingreso anual reportado (USD)", min_value=10000, max_value=500000, value=65000, step=2500)
-    dti = st.sidebar.slider("Relación Deuda-Ingreso mensual (DTI %)", min_value=0.0, max_value=60.0, value=18.0, step=0.5)
-    revol_util = st.sidebar.slider("Uso de cupo en tarjetas rotativas (%)", min_value=0.0, max_value=120.0, value=45.0, step=1.0)
-    revol_bal = st.sidebar.number_input("Saldo rotativo actual (USD)", min_value=0, max_value=200000, value=11000, step=500)
+    annual_inc = st.sidebar.number_input(
+        "Ingreso anual reportado (USD)",
+        min_value=10000,
+        max_value=500000,
+        value=65000,
+        step=2500,
+        key="sidebar_annual_inc"
+    )
+    dti = st.sidebar.slider(
+        "Relación Deuda-Ingreso mensual (DTI %)",
+        min_value=0.0,
+        max_value=60.0,
+        value=18.0,
+        step=0.5,
+        key="sidebar_dti"
+    )
+    revol_util = st.sidebar.slider(
+        "Uso de cupo en tarjetas rotativas (%)",
+        min_value=0.0,
+        max_value=120.0,
+        value=45.0,
+        step=1.0,
+        key="sidebar_revol_util"
+    )
+    revol_bal = st.sidebar.number_input(
+        "Saldo rotativo actual (USD)",
+        min_value=0,
+        max_value=200000,
+        value=11000,
+        step=500,
+        key="sidebar_revol_bal"
+    )
 
-    home_ownership = st.sidebar.selectbox("Tipo de vivienda", options=["MORTGAGE", "RENT", "OWN", "OTHER"], index=1)
+    home_ownership = st.sidebar.selectbox(
+        "Tipo de vivienda", options=["MORTGAGE", "RENT", "OWN", "OTHER"], index=1, key="sidebar_home_ownership"
+    )
     purpose = st.sidebar.selectbox(
         "Propósito del préstamo",
         options=[
@@ -123,22 +157,35 @@ def main():
             "medical",
         ],
         index=0,
+        key="sidebar_purpose"
     )
     verification_status = st.sidebar.selectbox(
         "Estado de verificación de ingresos",
         options=["Verified", "Source Verified", "Not Verified"],
         index=1,
+        key="sidebar_verification_status"
     )
 
     with st.sidebar.expander("⚙️ Historial crediticio detallado"):
-        emp_length = st.slider("Antigüedad laboral (años, 10 = 10+)", 0, 10, 5)
-        credit_history_years = st.slider("Antigüedad del historial crediticio (años)", 1, 40, 12)
-        open_acc = st.number_input("Líneas de crédito abiertas actualmente", 1, 50, 10)
-        total_acc = st.number_input("Total histórico de líneas de crédito", 1, 100, 22)
-        inq_last_6mths = st.slider("Consultas a central de riesgo (últimos 6 meses)", 0, 10, 1)
-        delinq_2yrs = st.slider("Moras >30 días en los últimos 2 años", 0, 10, 0)
-        pub_rec = st.slider("Registros públicos adversos (bancarrota/embargos)", 0, 5, 0)
-        has_prev_delinq = st.selectbox("¿Ha tenido alguna mora histórica?", options=[0, 1], format_func=lambda x: "Sí" if x == 1 else "No")
+        emp_length = st.slider("Antigüedad laboral (años, 10 = 10+)", 0, 10, 5, key="sidebar_emp_length")
+        credit_history_years = st.slider(
+            "Antigüedad del historial crediticio (años)", 1, 40, 12, key="sidebar_credit_history_years"
+        )
+        open_acc = st.number_input("Líneas de crédito abiertas actualmente", 1, 50, 10, key="sidebar_open_acc")
+        total_acc = st.number_input("Total histórico de líneas de crédito", 1, 100, 22, key="sidebar_total_acc")
+        inq_last_6mths = st.slider(
+            "Consultas a central de riesgo (últimos 6 meses)", 0, 10, 1, key="sidebar_inq_last_6mths"
+        )
+        delinq_2yrs = st.slider("Moras >30 días en los últimos 2 años", 0, 10, 0, key="sidebar_delinq_2yrs")
+        pub_rec = st.slider(
+            "Registros públicos adversos (bancarrota/embargos)", 0, 5, 0, key="sidebar_pub_rec"
+        )
+        has_prev_delinq = st.selectbox(
+            "¿Ha tenido alguna mora histórica?",
+            options=[0, 1],
+            format_func=lambda x: "Sí" if x == 1 else "No",
+            key="sidebar_has_prev_delinq"
+        )
 
     # -------------------------------------------------------------------------
     # GESTIÓN INTELIGENTE DE GRADE E INT_RATE (PRE-COTIZACIÓN AUTOMÁTICA)
