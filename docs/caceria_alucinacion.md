@@ -16,7 +16,8 @@ Las herramientas de IA producen errores que suenan convincentes. Su misión es c
 5. **Categoría:** Concepto / Código
 6. **La corrección:**
    Verificamos manualmente en el navegador que las versiones sí existían en PyPI, por lo que ignoramos la advertencia generada por la IA.
-
+7. **Lección Aprendida:**
+   Revisar y contrastar los datos entregados y confiar en la misma creación del proceso.
 ---
 
 ### Hallazgo 2: Gemini reporta y sugiere ejecutar un script inexistente (`build_blog.py`)
@@ -31,6 +32,8 @@ Las herramientas de IA producen errores que suenan convincentes. Su misión es c
 5. **Categoría:** Código
 6. **La corrección:**
    Creamos la carpeta necesaria y ajustamos el código correspondiente para asegurar un flujo de trabajo correcto.
+7. **Lección Aprendida:**
+   No hacer literal lo que dice la IA y verificar que la linea de trabajo que se esta haciendo si este: en primer lugar bien establecida y en segundo lugar bien realizada.
 
 ---
 
@@ -46,7 +49,8 @@ Las herramientas de IA producen errores que suenan convincentes. Su misión es c
 5. **Categoría:** Concepto / Código / Datos del mundo real
 6. **La corrección:**
    Tras la consulta con la IA, descubrimos que al crear nuestro mapa de targets habíamos incluido un espacio de más. Ajustamos el mapeo agregando tanto `Fully Paid` como `Charged Off` controlando las variantes con y sin espacio para evitar inconsistencias.
-
+7. **Lección Aprendida:**
+   Ser minuiciosos al momento de escribir variables asociadas al conjunto de datos, verificando que sean identicas o en defecto, cubrir las posibles variantes.
 ---
 
 ### Hallazgo 4: [Pendiente de completar]
@@ -61,7 +65,7 @@ Las herramientas de IA producen errores que suenan convincentes. Su misión es c
 5. **Categoría:** [Matemáticas / Código / Datos del mundo real / Bibliografía / Conceptos]
 6. **La corrección:**
    [Describe la solución]
-
+7. **Lección Aprendida:**
 ---
 
 ### Hallazgo 5: [Pendiente de completar]
@@ -76,3 +80,4 @@ Las herramientas de IA producen errores que suenan convincentes. Su misión es c
 5. **Categoría:** [Matemáticas / Código / Datos del mundo real / Bibliografía / Conceptos]
 6. **La corrección:**
    [Describe la solución]
+7. **Lección Aprendida:**
