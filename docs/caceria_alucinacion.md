@@ -1,5 +1,5 @@
 # Bitácora de Uso de Inteligencia Artificial
-# 7. Cacería de la alucinación 🎯
+# Cacería de la alucinación 🎯
 
 Las herramientas de IA producen errores que suenan convincentes. Su misión es cazarlos. A continuación se documentan los hallazgos en los que el asistente de IA generó información incorrecta, imprecisa, desactualizada o subóptima durante el desarrollo del trabajo.
 

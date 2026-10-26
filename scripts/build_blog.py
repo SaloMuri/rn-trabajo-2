@@ -445,7 +445,7 @@ def main():
     tab_audit_md = []
 
     for title, content in sections.items():
-        if "4." in title or "Fundamentación Matemática" in title:
+        if "4F." in title or "Fundamentación Matemática" in title:
             tab_math_md.append(content)
         elif "6." in title or "Parte 2:" in title:
             tab_lgd_md.append(content)
@@ -453,7 +453,7 @@ def main():
             tab_ia_md.append(content)
             tab_audit_md.append(content)
         else:
-            # Secciones 1, 2, 3, 5, 7 y 9 van completas en Parte 1 (PD)
+            # Secciones 1, 2, 3, 4, 5 y 9 van completas en Parte 1 (PD)
             tab_pd_md.append(content)
 
     # Si existen docs/uso_ia.md o docs/caceria_alucinacion.md, agregarlos a sus pestañas respectivas

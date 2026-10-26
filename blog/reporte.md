@@ -75,9 +75,9 @@ Antes del entrenamiento, formulamos tres hipótesis financieras verificables emp
 
 ---
 
-## 4. Fundamentación Matemática
+## 4F. Fundamentación Matemática
 
-### 4.1. Función de Pérdida: Entropía Cruzada Binaria Ponderada y Estabilidad Numérica
+### 4F.1. Función de Pérdida: Entropía Cruzada Binaria Ponderada y Estabilidad Numérica
 Sea $\mathcal{D} = \{(\mathbf{x}_i, y_i)\}_{i=1}^N$ el conjunto de entrenamiento, donde $\mathbf{x}_i \in \mathbb{R}^D$ ($D=38$) y $y_i \in \{0, 1\}$. El modelo produce un *logit* real $z_i = f_{\boldsymbol{\theta}}(\mathbf{x}_i) \in \mathbb{R}$, el cual se proyecta al espacio de probabilidades mediante la función logística sigmoide:
 
 $$\hat{p}_i = \sigma(z_i) = \frac{1}{1 + e^{-z_i}}$$
@@ -96,7 +96,7 @@ $$\frac{\partial \mathcal{L}_i}{\partial z_i} = \sigma(z_i)\left(1 + (w_+ - 1)y_
 
 Cuando $w_+ = 1$, se recupera la expresión clásica $\frac{\partial \mathcal{L}_i}{\partial z_i} = \hat{p}_i - y_i$, mostrando que el impulso de retropropagación es directamente proporcional al error de calibración residual.
 
-### 4.2. Modelo de Referencia: Regresión Logística con Regularización $L_2$
+### 4F.2. Modelo de Referencia: Regresión Logística con Regularización $L_2$
 El modelo base (*baseline*) parametriza el *logit* como una combinación afín de las características estandarizadas:
 
 $$z_i = \mathbf{w}^\top \mathbf{x}_i + b \implies \ln\left(\frac{\hat{p}_i}{1 - \hat{p}_i}\right) = \sum_{j=1}^{D} w_j x_{ij} + b$$
@@ -105,7 +105,7 @@ Esto implica que la frontera de decisión $\{\mathbf{x} \in \mathbb{R}^D : \hat{
 
 $$\min_{\mathbf{w}, b} \frac{1}{N} \sum_{i=1}^N \mathcal{L}_i(\mathbf{w}^\top \mathbf{x}_i + b, y_i) + \frac{\lambda}{2} \|\mathbf{w}\|_2^2$$
 
-### 4.3. Arquitectura de Red Neuronal Multicapa (MLP)
+### 4F.3. Arquitectura de Red Neuronal Multicapa (MLP)
 Para superar la rigidez aditiva de la Regresión Logística, implementamos en `src/creditrisk/models/mlp.py` un Perceptrón Multicapa de $L$ capas ocultas. Para una entrada $\mathbf{h}^{(0)} = \mathbf{x}$, cada bloque oculto $l \in \{1, \dots, L\}$ ejecuta la composición de cuatro operadores:
 
 $$\begin{aligned}
@@ -124,7 +124,7 @@ $$z = \mathbf{w}_{\text{out}}^\top \mathbf{h}^{(L)} + b_{\text{out}}$$
 2. **Activación No Lineal $\phi(\cdot)$ (ReLU / GELU):** Introduce particiones poliedrales (con $\text{ReLU}(u) = \max(0, u)$) o curvatura suave ($\text{GELU}(u) = u \Phi(u)$), habilitando al modelo para aprender interacciones multiplicativas implícitas como $\text{DTI} \times \text{Tasa de Interés}$ sin especificarlas manualmente.
 3. **Dropout (Srivastava et al., 2014) y Decaimiento de Pesos ($L_2$ en AdamW):** Previenen la co-adaptación de neuronas ocultas sobre ruido idiosincrático del conjunto de entrenamiento.
 
-### 4.4. Métricas de Evaluación en Riesgo Crediticio
+### 4F.4. Métricas de Evaluación en Riesgo Crediticio
 1. **Área Bajo la Curva ROC (ROC-AUC) e Índice de Gini:**  
    El $\text{AUC}$ equivale a la probabilidad de que el modelo asigne una $\text{PD}$ estrictamente mayor a un cliente incumplido elegido al azar que a un cliente cumplido elegido al azar:
    $$\text{AUC} = \mathbb{P}\left(\hat{p}(\mathbf{x}_+) > \hat{p}(\mathbf{x}_-) \mid Y_+ = 1, Y_- = 0\right)$$
@@ -138,7 +138,7 @@ $$z = \mathbf{w}_{\text{out}}^\top \mathbf{h}^{(L)} + b_{\text{out}}$$
    Mide el error cuadrático medio entre las probabilidades pronosticadas y los eventos binarios realizados:
    $$\text{BS} = \frac{1}{N} \sum_{i=1}^N (\hat{p}_i - y_i)^2$$
 
-### 4.5. Derivación Matemática del *Scorecard* Bancario (*PDO Scaling*)
+### 4F.5. Derivación Matemática del *Scorecard* Bancario (*PDO Scaling*)
 En la industria financiera, las probabilidades $\hat{p}_i$ se transforman en un puntaje aditivo mediante una función afín del logaritmo de las probabilidades a favor de pago ($\text{Odds}_{\text{bueno}} = \frac{1 - \hat{p}_i}{\hat{p}_i}$) (Siddiqi, 2017):
 
 $$\text{Score}(\hat{p}_i) = \text{Offset} + \text{Factor} \cdot \ln\left(\frac{1 - \hat{p}_i}{\hat{p}_i}\right)$$
@@ -282,7 +282,7 @@ Dado que el MLP opera como una función compuesta no lineal, aplicamos **Importa
 
 ---
 
-## 7. Discusión Crítica, Limitaciones y Recomendaciones
+## 5. Discusión Crítica, Limitaciones y Recomendaciones
 
 1. **Magnitud de la Ganancia del MLP sobre Datos Tabulares:** Si bien el MLP supera de manera estadísticamente significativa a la Regresión Logística ($+0.0031$ en AUC y $+0.0067$ en KS), la ganancia es moderada. Esto coincide con la literatura reciente sobre aprendizaje profundo en datos tabulares (Grinsztajn, Oyallon, & Varoquaux, 2022), donde la presencia de una variable resumen fuertemente informativa (`int_rate`) permite que un modelo lineal capture cerca del $98\%$ del poder predictivo alcanzable con las características disponibles.
 2. **Deriva Temporal (*Concept & Covariate Drift*):** El incremento en la tasa base de incumplimiento entre el conjunto de entrenamiento ($20.46\%$) y los conjuntos de validación/prueba ($27.12\%$ y $25.46\%$) demuestra que los modelos de riesgo crediticio requieren recalibración periódica de su intercepto (*prior shift correction*) y monitoreo continuo mediante el **Índice de Estabilidad Poblacional (PSI)** implementado en nuestra aplicación interactiva (`app/app.py`).
@@ -301,7 +301,7 @@ En cumplimiento de los lineamientos de transparencia académica del curso, el de
 
 ---
 
-## 9. Referencias Bibliográficas (Formato APA 7.ª Edición)
+## Referencias Bibliográficas (Formato APA 7.ª Edición)
 
 * Basel Committee on Banking Supervision [BCBS]. (2017). *Basel III: Finalising post-crisis reforms*. Bank for International Settlements. https://www.bis.org/bcbs/publ/d424.htm
 * Grinsztajn, L., Oyallon, E., & Varoquaux, G. (2022). Why do tree-based models still outperform deep learning on typical tabular data? *Advances in Neural Information Processing Systems (NeurIPS)*, 35, 507–520.
