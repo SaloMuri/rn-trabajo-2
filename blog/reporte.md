@@ -1,8 +1,6 @@
-# ¿Me prestas? Modelamiento de Riesgo Crediticio con Redes Neuronales en Datos Tabulares
-
 **Curso:** Redes Neuronales y Algoritmos Bioinspirados — Universidad Nacional de Colombia, Sede Medellín (Facultad de Minas)  
 **Semestre:** 2026-02  
-**Enlaces del Proyecto:** [Repositorio en GitHub](#) · [Aplicación Web Interactiva (Scorecard)](#) · [Video Promocional](#)
+**Enlaces del Proyecto:** [Repositorio en GitHub](https://github.com/SaloMuri/rn-trabajo-2) · [Aplicación Web Interactiva (Scorecard)](https://rn-trabajo-2-app.streamlit.app) · [Video Promocional](#)
 
 ---
 
@@ -33,7 +31,7 @@ Para garantizar una coherencia estricta en la selección de variables, el prepro
 
 Utilizamos el conjunto de datos público de Lending Club publicado por Ranadeep en Kaggle (`loan.csv`), el cual contiene originalmente **887,379 registros y 74 columnas** correspondientes a préstamos originados entre junio de 2007 (`2007-06`) y diciembre de 2015 (`2015-12`).
 
-Durante la auditoría del diccionario oficial (`LCDataDictionary.xlsx`), detectamos que la hoja `browseNotes` contiene variables en formato *camelCase* que no existen en el archivo `LoanStats` (`loan.csv`), y que un conjunto de variables sobre cuentas por cuotas (*installment accounts*, p. ej., `il_util`, `total_bal_il`, `max_bal_bc`) presenta más del 95% de valores faltantes por haberse incorporado apenas a finales de 2015. Por tanto, depuramos el espacio de características a **20 variables predictoras de originación** con alta completitud histórica (14 numéricas continuas, 3 categóricas ordinales y 3 categóricas nominales), las cuales se expanden a **38 características** tras la codificación *One-Hot*.
+Durante la auditoría del diccionario oficial (`LCDataDictionary.xlsx`), detectamos que la hoja `browseNotes` contiene variables en formato *camelCase* que no existen en el archivo `LoanStats` (`loan.csv`), y que un conjunto de variables sobre cuentas por cuotas (*installment accounts*, p. ej., `il_util`, `total_bal_il`, `max_bal_bc`) presenta más del 95% de valores faltantes por haberse incorporado apenas a finales de 2015. Por tanto, depuramos el dataset válido a **23 columnas** (incluyendo metadatos de partición/identificación y las **20 variables predictoras de originación** con alta completitud histórica: 14 numéricas continuas, 3 categóricas ordinales y 3 categóricas nominales), las cuales se expanden a **38 características** tras la codificación *One-Hot*.
 
 Para definir la variable objetivo binaria $\text{target\_pd} \in \{0, 1\}$, aplicamos las reglas de negocio sobre `loan_status`:
 
@@ -47,7 +45,7 @@ Para definir la variable objetivo binaria $\text{target\_pd} \in \{0, 1\}$, apli
 | `Does not meet the credit policy. Status: Charged Off` | **1** | Mal pagador confirmado bajo políticas históricas previas. |
 | `Current`, `Issued`, `In Grace Period`, `Late (16-30 days)` | **NA (Excluidos)** | Créditos en curso sin desenlace definitivo al corte de dic-2015 (censura a la derecha). |
 
-Tras descartar los 621,598 préstamos en curso (`NA`), el conjunto de datos válido para la Parte 1 consta de **265,781 préstamos cerrados o en mora severa**, con una **tasa global de incumplimiento del 21.84%**.
+Tras descartar los 618,849 préstamos en curso (`NA`), el conjunto de datos válido para la Parte 1 consta de **268,530 préstamos cerrados o en mora severa** (268,530 filas x 23 columnas), con una **tasa global de incumplimiento del 21.90%**.
 
 ### 2.2. Justificación de la Partición Temporal (*Out-of-Time Split*)
 
@@ -57,12 +55,12 @@ En consecuencia, implementamos una **partición estrictamente cronológica basad
 
 | Partición | Ventana Temporal (`issue_d`) | Registros ($N$) | % del Total | Tasa de Incumplimiento (PD) | Rol Metodológico |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| **Entrenamiento (`Train`)** | `2007-06` a `2014-06` | 199,958 | 75.23% | 20.36% | Ajuste de pesos de los modelos y ajuste exclusivo (`fit`) del preprocesador (`SimpleImputer`, `StandardScaler`, `OneHotEncoder`). |
-| **Validación (`Val`)** | `2014-07` a `2014-12` | 34,988 | 13.16% | 27.12% | Monitoreo de parada temprana (*Early Stopping*) y selección de hiperparámetros (`run_search.py`). |
-| **Prueba (`Test Out-of-Time`)** | `2015-01` a `2015-12` | 30,835 | 11.60% | 25.46% | Evaluación final fuera de tiempo (discriminación, calibración, estabilidad en 30 semillas e interpretabilidad). |
+| **Entrenamiento (`Train`)** | `2007-06` a `2014-06` (`<= 2014-06-01`) | 202,707 | 75.49% | 20.46% | Ajuste de pesos de los modelos y ajuste exclusivo (`fit`) del preprocesador (`SimpleImputer`, `StandardScaler`, `OneHotEncoder`). |
+| **Validación (`Val`)** | `2014-07` a `2014-12` (`<= 2014-12-01`) | 34,988 | 13.03% | 27.12% | Monitoreo de parada temprana (*Early Stopping*) y selección de hiperparámetros (`run_search.py`). |
+| **Prueba (`Test Out-of-Time`)** | `2015-01` a `2015-12` (`> 2014-12-01`) | 30,835 | 11.48% | 25.46% | Evaluación final fuera de tiempo (discriminación, calibración, estabilidad en 30 semillas e interpretabilidad). |
 
 **Hallazgo sobre el cambio en la tasa base (Sesgo de Maduración):**  
-Se observa que la tasa de incumplimiento pasa del **20.36%** en `Train` al **27.12%** en `Val` y **25.46%** en `Test`. Este fenómeno responde al **sesgo de maduración (*maturity bias*)**: dado que el corte del dataset ocurre en diciembre de 2015, entre los préstamos originados en 2014–2015 que ya habían alcanzado un estado definitivo (no `Current`), están sobrerrepresentados los *incumplimientos tempranos (early defaults)* frente a los buenos pagadores que siguen pagando sus cuotas normales de 36 o 60 meses. Identificar este desplazamiento distributivo (*covariate & prior shift*) será clave al analizar la curva de calibración.
+Se observa que la tasa de incumplimiento pasa del **20.46%** en `Train` al **27.12%** en `Val` y **25.46%** en `Test`. Este fenómeno responde al **sesgo de maduración (*maturity bias*)**: dado que el corte del dataset ocurre en diciembre de 2015, entre los préstamos originados en 2014–2015 que ya habían alcanzado un estado definitivo (no `Current`), están sobrerrepresentados los *incumplimientos tempranos (early defaults)* frente a los buenos pagadores que siguen pagando sus cuotas normales de 36 o 60 meses. Identificar este desplazamiento distributivo (*covariate & prior shift*) será clave al analizar la curva de calibración.
 
 ---
 
@@ -70,8 +68,8 @@ Se observa que la tasa de incumplimiento pasa del **20.36%** en `Train` al **27.
 
 Antes de entrenar los modelos, exploramos el conjunto de entrenamiento (`Train`) y formulamos **tres hipótesis explícitas de riesgo** fundamentadas en teoría financiera:
 
-* **Hipótesis 1 (Prima de Riesgo en Tasa y Calificación Inicial):**  
-  *“La tasa de interés asignada (`int_rate`) y el grado crediticio (`grade`) presentan una relación monotónica creciente con la probabilidad de incumplimiento; sin embargo, al ser `int_rate` una medida continua y granular del riesgo percibido en originación, absorberá la mayor parte del poder predictivo frente a la variable ordinal `grade`.”*
+* **Hipótesis 1 (Efecto de las Variables Nominales — `home_ownership`, `verification_status` y `purpose` — sobre el Puntaje de Riesgo frente a la Tasa de Interés `int_rate`):**  
+  *“Inicialmente hipotetizamos que las variables categóricas nominales del solicitante (`home_ownership`, `verification_status` y `purpose`) tendrían un alto impacto directo en el puntaje crediticio asignado (y en la probabilidad de incumplimiento); sin embargo, tras aplicar el esquema de codificación (*One-Hot Encoding*), se descubre que su aporte directo al score de riesgo es marginal porque su prima de riesgo es absorbida previamente en la fijación de la tasa de interés (`int_rate`), variable sobre la cual dichas categorías nominales sí ejercen una diferenciación estadística altamente significativa.”*
 * **Hipótesis 2 (Estrés Financiero por Capacidad de Pago y Plazo — `dti`, `annual_inc` y `term`):**  
   *“Un mayor nivel de endeudamiento mensual respecto al ingreso (`dti`), menores ingresos anuales (`annual_inc`) y la elección de plazos largos (`term = 60 meses` frente a `36 meses`) incrementan sustancialmente la probabilidad de incumplimiento, existiendo un efecto no lineal de interacción cuando convergen alto `dti` y plazo de 60 meses.”*
 * **Hipótesis 3 (Saturación de Cupo Rotativo y Propósito del Préstamo — `revol_util` y `purpose`):**  
@@ -79,12 +77,14 @@ Antes de entrenar los modelos, exploramos el conjunto de entrenamiento (`Train`)
 
 ![Figura 1: Análisis Descriptivo y Validación Visual de Hipótesis](../reports/figures/pd/fig1_eda_hipotesis.png)
 
-**Análisis descriptivo preliminar (Figura 1):**  
-1. En el **Panel Izquierdo (H1)** se observa una progresión monotónica perfecta en los datos de entrenamiento: mientras el grado `A` registra una tasa de impago inferior al 7%, los grados `F` y `G` superan el 40%–45% de incumplimiento.
+**Análisis descriptivo preliminar y pruebas estadísticas (Figura 1):**  
+1. En el **Panel Izquierdo (H1)** se contrasta el efecto de las variables nominales (`home_ownership`, `verification_status` y `purpose`) frente a la tasa de interés (`int_rate`). Las pruebas de análisis de varianza (ANOVA de una vía y Kruskal-Wallis sobre `Train`) confirman que las categorías nominales modifican de forma altamente significativa la tasa de interés cobrada al cliente ($p < 0.0001$): por ejemplo, los solicitantes con ingresos verificados (`Verified` / `Source Verified`), vivienda en arriendo (`RENT`) o propósitos riesgosos reciben tasas `int_rate` significativamente mayores que quienes poseen hipoteca (`MORTGAGE`) o buscan pagar tarjetas (`credit_card`). No obstante, al expandir estas categorías mediante *One-Hot Encoding* dentro del modelo multivariado, es la variable continua `int_rate` la que condensa y absorbe dicho riesgo, reduciendo el peso directo de las dummies nominales sobre el puntaje final.
 2. En el **Panel Central (H2)** se evidencia una fuerte interacción: en todos los cuartiles de `dti`, los préstamos a **60 meses** (barras rojas) tienen una tasa de incumplimiento más de 10 puntos porcentuales superior a los de **36 meses** (barras verdes), superando el 35% de impago cuando el cliente combina el cuartil más alto de `dti` (`Q4`) con un plazo de 60 meses.
 3. En el **Panel Derecho (H3)**, los préstamos destinados a pequeños negocios (`small_business`) lideran la siniestralidad con cerca del 30% de incumplimiento, seguidos por consolidación de deuda (`debt_consolidation`), mientras que tarjetas de crédito (`credit_card`) y compras mayores (`major_purchase`) presentan tasas menores.
 
-*(En la Sección 6.5 retomaremos estas tres hipótesis para confirmarlas o matizarlas cuantitativamente mediante el análisis de interpretabilidad de los modelos entrenados).*
+*(En la Sección 5.5 retomaremos estas tres hipótesis para confirmarlas o matizarlas cuantitativamente mediante el análisis de interpretabilidad por permutación de los modelos entrenados).*
+
+---
 
 ## 4. Fundamentación Matemática
 
@@ -201,7 +201,7 @@ Para verificar que la superioridad del MLP (`[64, 32]`, **4,801 parámetros**) n
 
 **Interpretación de Discriminación (Figura 3) y Calibración (Figura 4):**
 * En la **Figura 3**, la curva ROC del MLP domina uniformemente a la de la Regresión Logística, y la curva KS muestra una separación máxima de casi 30 puntos porcentuales (`KS = 0.2923`–`0.2982`) alrededor del umbral de probabilidad $\hat{p} \approx 0.24$.
-* En la **Figura 4 (Curva de Calibración)**, ambos modelos siguen de cerca la diagonal ideal, ubicándose ligeramente por encima de la diagonal en los deciles medios. Esto refleja exactamente el desplazamiento de la tasa base explicado en la Sección 2.2: los modelos fueron entrenados en un periodo histórico con tasa de impago del **20.36%**, mientras que la cohorte de prueba (`Test 2015`) exhibe un **25.46%** de impago debido a la maduración temprana de los siniestros. Aun así, el MLP logra un **Brier Score menor (`0.1731` vs. `0.1756`)**, ajustándose mejor en las colas de alto riesgo.
+* En la **Figura 4 (Curva de Calibración)**, ambos modelos siguen de cerca la diagonal ideal, ubicándose ligeramente por encima de la diagonal en los deciles medios. Esto refleja exactamente el desplazamiento de la tasa base explicado en la Sección 2.2: los modelos fueron entrenados en un periodo histórico con tasa de impago del **20.46%**, mientras que la cohorte de prueba (`Test 2015`) exhibe un **25.46%** de impago debido a la maduración temprana de los siniestros. Aun así, el MLP logra un **Brier Score menor (`0.1731` vs. `0.1756`)**, ajustándose mejor en las colas de alto riesgo.
 
 ### 5.4. Representación del Modelo mediante la Scorecard Crediticia
 
@@ -245,11 +245,11 @@ Para identificar qué variables determinan el riesgo de incumplimiento en una re
 
 #### Contraste de las Hipótesis Iniciales frente a la Evidencia Empírica:
 1. **Verificación de la Hipótesis 1 — CONFIRMADA COMPLETAMENTE:**  
-   `int_rate` es la variable más determinante del modelo (al permutarla, el AUC del MLP cae casi 5 puntos porcentuales: `0.04947`), mientras que `grade` cae hasta la posición #20 (`0.00091`). Tal como hipotetizamos, dado que la tasa de interés es continua y refleja la tarificación fina del riesgo en originación, vuelve redundante a la categoría discreta `grade`. Asimismo, se observa por qué el MLP supera a la Regresión Logística: el modelo lineal depende de forma desproporcionada de `int_rate` (`0.08943`), mientras que el MLP distribuye la importancia hacia interacciones no lineales con el ingreso y la cuota.
+   Aunque intuitivamente se creía que las variables nominales (`home_ownership`, `verification_status`, `purpose`) tendrían un peso protagónico sobre el puntaje de la Scorecard, la tabla de Importancia por Permutación demuestra que tras el *One-Hot Encoding* su impacto directo en el MLP es reducido: las categorías de vivienda aparecen recién en los puestos #12 (`home_ownership_MORTGAGE`, $\Delta \text{AUC} = 0.00274$) y #14 (`home_ownership_RENT`, $\Delta \text{AUC} = 0.00172$), las de propósito en los puestos #18 y #19 ($\Delta \text{AUC} \approx 0.0009$), y `verification_status` ni siquiera ingresa al Top 15. En cambio, tal como planteamos en el hallazgo de la hipótesis, estas variables nominales afectan de manera decisiva la **tasa de interés (`int_rate`)**, la cual ocupa la posición **#1 absoluta del modelo** ($\Delta \text{AUC} = 0.04947$ en el MLP y $0.08943$ en la Regresión Logística). Es decir, el motor de originación penaliza las categorías nominales riesgosas asignándoles una mayor `int_rate`, y la red neuronal captura dicho riesgo directamente a través de la tasa de interés y de sus interacciones no lineales con la solvencia del deudor.
 2. **Verificación de la Hipótesis 2 — CONFIRMADA COMPLETAMENTE:**  
    La capacidad de pago y la estructura del crédito ocupan los lugares #2, #3, #6, #7 y #8 del ranking del MLP: `annual_inc` (`0.02393`), `dti` (`0.01380`), `term` (`0.00641`), `loan_amnt` (`0.00432`) e `installment` (`0.00348`). Más aún, el MLP logra extraer casi el doble de señal informativa del ingreso anual (`0.02393` vs. `0.01369` en LR) y del plazo `term` (`0.00641` vs. `0.00370` en LR), y aprovecha la cuota mensual `installment` (`0.00348`), la cual en la Regresión Logística tenía importancia nula (`-0.00024`) por su colinealidad con el monto y la tasa.
 3. **Verificación de la Hipótesis 3 — CONFIRMADA PARCIALMENTE (MATIZADA):**  
-   Se **confirma** la relevancia de la utilización de cupo en tarjetas rotativas (`revol_util`), que se posiciona como la **5.ª variable más importante** de toda la red neuronal (`0.00794`) junto con el saldo rotativo `revol_bal` (#10, `0.00325`). Sin embargo, se **matiza** el peso marginal del propósito del préstamo (`purpose`): aunque en el análisis descriptivo univariado `small_business` tenía la mayor tasa de impago bruta, en el modelo multivariado ocupa la posición #18 (`0.00092`) y `debt_consolidation` la #19 (`0.00091`). ¿Por qué? Porque cuando un cliente pide un préstamo para `small_business`, la plataforma ya le asigna una `int_rate` más alta; por ende, el efecto de riesgo del propósito queda parcialmente mediado por la tasa de interés y el endeudamiento del solicitante.
+   Se **confirma** la relevancia de la utilización de cupo en tarjetas rotativas (`revol_util`), que se posiciona como la **5.ª variable más importante** de toda la red neuronal (`0.00794`) junto con el saldo rotativo `revol_bal` (#10, `0.00325`). Sin embargo, en concordancia con la Hipótesis 1, se **matiza** el peso marginal del propósito del préstamo (`purpose`): aunque en el análisis descriptivo univariado `small_business` tenía la mayor tasa de impago bruta, en el modelo multivariado ocupa la posición #18 (`0.00092`) y `debt_consolidation` la #19 (`0.00091`). ¿Por qué? Porque cuando un cliente pide un préstamo para `small_business`, la plataforma ya le asigna una `int_rate` más alta; por ende, el efecto de riesgo del propósito queda parcialmente mediado por la tasa de interés y el endeudamiento del solicitante.
 
 ---
 
@@ -286,7 +286,7 @@ El detalle exhaustivo de los prompts y verificaciones se encuentra versionado en
 2. **Incompatibilidad de entorno Unix vs. Windows CMD:** Corrección de llamadas `PYTHONPATH=src` y `make` mediante inyección programática de rutas con `pathlib` en `scripts/` y `tests/`.
 3. **Degradación del Brier Score por balanceo artificial (`LR_6`):** Demostración empírica de que `class_weight="balanced"` degrada el Brier Score de `0.1796` a `0.2250`.
 4. **Ausencia estructural en `mths_since_last_delinq`:** Sustitución de la imputación por mediana (que asignaba moras falsas a clientes limpios) por el indicador binario `has_prev_delinq`.
-5. **Alineación del Caso de Uso frente a `grade` e `int_rate`:** Fundamentación del modelo en la etapa de *Underwriting* contractual y análisis de absorción de importancia de `grade` (#20) por parte de `int_rate` (#1).
+5. **Alineación del Caso de Uso frente a Variables Nominales e `int_rate`:** Fundamentación del modelo en la etapa de *Underwriting* contractual y análisis de cómo el *One-Hot Encoding* de variables nominales (`home_ownership`, `verification_status`, `purpose`) delega el poder predictivo directo sobre `int_rate` (#1).
 
 ---
 
