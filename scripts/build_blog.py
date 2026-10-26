@@ -447,9 +447,9 @@ def main():
     for title, content in sections.items():
         if "4F." in title or "Fundamentación Matemática" in title:
             tab_math_md.append(content)
-        elif "6." in title or "Parte 2:" in title:
+        elif "1P." in title or "Parte 2:" in title:
             tab_lgd_md.append(content)
-        elif "8." in title or "Uso de IA" in title:
+        elif "1A." in title or "Uso de IA" in title:
             tab_ia_md.append(content)
             tab_audit_md.append(content)
         else:

@@ -788,12 +788,12 @@
 </ul>
         </section>
         <section id="tab-lgd" class="tab-panel">
-            <h2 id="6-parte-2-estimacion-de-perdida-dado-el-incumplimiento-lgd-y-perdida-esperada">6. Parte 2: Estimación de Pérdida Dado el Incumplimiento (LGD) y Pérdida Esperada</h2>
+            <h2 id="1p-parte-2-estimacion-de-perdida-dado-el-incumplimiento-lgd-y-perdida-esperada">1P. Parte 2: Estimación de Pérdida Dado el Incumplimiento (LGD) y Pérdida Esperada</h2>
 <p><em>(Sección reservada y pre-estructurada en el paquete <code>src/creditrisk/expected_loss.py</code> y <code>scripts/run_lgd.py</code> para la Entrega de la Parte 2).</em></p>
 <ul>
-<li><strong>6.1. Construcción de la Variable Objetivo LGD:</strong> Filtrado del subconjunto de préstamos incumplidos ($Y=1$) y cálculo de la tasa de recuperación sobre el principal expuesto ($\text{Recovery Rate} = \frac{\text{recoveries}}{\text{funded\_amnt}}$), definiendo $\text{LGD} = \text{clip}(1 - \text{Recovery Rate}, 0, 1)$.</li>
-<li><strong>6.2. Desafíos Estadísticos de la LGD:</strong> Tratamiento de la naturaleza bimodal e inflada en uno (<em>one-inflated</em>, donde la mayoría de los créditos sin garantía real tienen recuperación nula $\text{LGD} = 1.0$) mediante arquitecturas en dos etapas (<em>Hurdle Model</em> / Regresión Beta o MLP con salida acotada).</li>
-<li><strong>6.3. Integración de Pérdida Esperada ($\text{EL} = \widehat{\text{PD}} \cdot \widehat{\text{LGD}} \cdot \text{EAD}$):</strong> Evaluación del error de provisión agregada a nivel de portafolio en dólares.</li>
+<li><strong>1P.1. Construcción de la Variable Objetivo LGD:</strong> Filtrado del subconjunto de préstamos incumplidos ($Y=1$) y cálculo de la tasa de recuperación sobre el principal expuesto ($\text{Recovery Rate} = \frac{\text{recoveries}}{\text{funded\_amnt}}$), definiendo $\text{LGD} = \text{clip}(1 - \text{Recovery Rate}, 0, 1)$.</li>
+<li><strong>1P.2. Desafíos Estadísticos de la LGD:</strong> Tratamiento de la naturaleza bimodal e inflada en uno (<em>one-inflated</em>, donde la mayoría de los créditos sin garantía real tienen recuperación nula $\text{LGD} = 1.0$) mediante arquitecturas en dos etapas (<em>Hurdle Model</em> / Regresión Beta o MLP con salida acotada).</li>
+<li><strong>1P.3. Integración de Pérdida Esperada ($\text{EL} = \widehat{\text{PD}} \cdot \widehat{\text{LGD}} \cdot \text{EAD}$):</strong> Evaluación del error de provisión agregada a nivel de portafolio en dólares.</li>
 </ul>
 <hr />
         </section>
@@ -857,7 +857,7 @@
 <hr />
         </section>
         <section id="tab-ia" class="tab-panel">
-            <h2 id="8-declaracion-de-uso-de-inteligencia-artificial-y-caceria-de-alucinaciones">8. Declaración de Uso de Inteligencia Artificial y Cacería de Alucinaciones</h2>
+            <h2 id="1a-declaracion-de-uso-de-inteligencia-artificial-y-caceria-de-alucinaciones">1A. Declaración de Uso de Inteligencia Artificial y Cacería de Alucinaciones</h2>
 <p>En cumplimiento de los lineamientos de transparencia académica del curso, el detalle exhaustivo de las interacciones con modelos de lenguaje de gran escala (LLMs) se encuentra documentado en los archivos auditables del repositorio:
 * <strong>Registro de Uso de IA (<code>docs/uso_ia.md</code>):</strong> Documenta la asistencia en la estructuración modular del paquete <code>creditrisk</code>, generación de plantillas <code>Makefile</code> y depuración de estilos en <code>Streamlit</code>. Toda la lógica de prevención de <em>data leakage</em>, partición temporal y validación estadística fue diseñada y verificada por los autores.
 * <strong>Cacería de Alucinaciones (<code>docs/caceria_alucinacion.md</code>):</strong> Registra tres errores técnicos críticos sugeridos inicialmente por la IA y corregidos por el equipo:
@@ -925,7 +925,7 @@
 </table>
         </section>
         <section id="tab-audit" class="tab-panel">
-            <h2 id="8-declaracion-de-uso-de-inteligencia-artificial-y-caceria-de-alucinaciones">8. Declaración de Uso de Inteligencia Artificial y Cacería de Alucinaciones</h2>
+            <h2 id="1a-declaracion-de-uso-de-inteligencia-artificial-y-caceria-de-alucinaciones">1A. Declaración de Uso de Inteligencia Artificial y Cacería de Alucinaciones</h2>
 <p>En cumplimiento de los lineamientos de transparencia académica del curso, el detalle exhaustivo de las interacciones con modelos de lenguaje de gran escala (LLMs) se encuentra documentado en los archivos auditables del repositorio:
 * <strong>Registro de Uso de IA (<code>docs/uso_ia.md</code>):</strong> Documenta la asistencia en la estructuración modular del paquete <code>creditrisk</code>, generación de plantillas <code>Makefile</code> y depuración de estilos en <code>Streamlit</code>. Toda la lógica de prevención de <em>data leakage</em>, partición temporal y validación estadística fue diseñada y verificada por los autores.
 * <strong>Cacería de Alucinaciones (<code>docs/caceria_alucinacion.md</code>):</strong> Registra tres errores técnicos críticos sugeridos inicialmente por la IA y corregidos por el equipo:
@@ -936,7 +936,7 @@
 <hr />
 <hr />
 <h1 id="bitacora-de-uso-de-inteligencia-artificial">Bitácora de Uso de Inteligencia Artificial</h1>
-<h1 id="7-caceria-de-la-alucinacion">7. Cacería de la alucinación 🎯</h1>
+<h1 id="caceria-de-la-alucinacion">Cacería de la alucinación 🎯</h1>
 <p>Las herramientas de IA producen errores que suenan convincentes. Su misión es cazarlos. A continuación se documentan los hallazgos en los que el asistente de IA generó información incorrecta, imprecisa, desactualizada o subóptima durante el desarrollo del trabajo.</p>
 <h3 id="hallazgo-1-gemini-afirma-que-en-requirementstxt-se-usan-versiones-de-librerias-inexistentes">Hallazgo 1: Gemini afirma que en <code>requirements.txt</code> se usan versiones de librerías inexistentes</h3>
 <ol>

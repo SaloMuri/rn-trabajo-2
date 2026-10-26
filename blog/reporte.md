@@ -272,13 +272,13 @@ Dado que el MLP opera como una función compuesta no lineal, aplicamos **Importa
 
 ---
 
-## 6. Parte 2: Estimación de Pérdida Dado el Incumplimiento (LGD) y Pérdida Esperada
+## 1P. Parte 2: Estimación de Pérdida Dado el Incumplimiento (LGD) y Pérdida Esperada
 
 *(Sección reservada y pre-estructurada en el paquete `src/creditrisk/expected_loss.py` y `scripts/run_lgd.py` para la Entrega de la Parte 2).*
 
-* **6.1. Construcción de la Variable Objetivo LGD:** Filtrado del subconjunto de préstamos incumplidos ($Y=1$) y cálculo de la tasa de recuperación sobre el principal expuesto ($\text{Recovery Rate} = \frac{\text{recoveries}}{\text{funded\_amnt}}$), definiendo $\text{LGD} = \text{clip}(1 - \text{Recovery Rate}, 0, 1)$.
-* **6.2. Desafíos Estadísticos de la LGD:** Tratamiento de la naturaleza bimodal e inflada en uno (*one-inflated*, donde la mayoría de los créditos sin garantía real tienen recuperación nula $\text{LGD} = 1.0$) mediante arquitecturas en dos etapas (*Hurdle Model* / Regresión Beta o MLP con salida acotada).
-* **6.3. Integración de Pérdida Esperada ($\text{EL} = \widehat{\text{PD}} \cdot \widehat{\text{LGD}} \cdot \text{EAD}$):** Evaluación del error de provisión agregada a nivel de portafolio en dólares.
+* **1P.1. Construcción de la Variable Objetivo LGD:** Filtrado del subconjunto de préstamos incumplidos ($Y=1$) y cálculo de la tasa de recuperación sobre el principal expuesto ($\text{Recovery Rate} = \frac{\text{recoveries}}{\text{funded\_amnt}}$), definiendo $\text{LGD} = \text{clip}(1 - \text{Recovery Rate}, 0, 1)$.
+* **1P.2. Desafíos Estadísticos de la LGD:** Tratamiento de la naturaleza bimodal e inflada en uno (*one-inflated*, donde la mayoría de los créditos sin garantía real tienen recuperación nula $\text{LGD} = 1.0$) mediante arquitecturas en dos etapas (*Hurdle Model* / Regresión Beta o MLP con salida acotada).
+* **1P.3. Integración de Pérdida Esperada ($\text{EL} = \widehat{\text{PD}} \cdot \widehat{\text{LGD}} \cdot \text{EAD}$):** Evaluación del error de provisión agregada a nivel de portafolio en dólares.
 
 ---
 
@@ -290,7 +290,7 @@ Dado que el MLP opera como una función compuesta no lineal, aplicamos **Importa
 
 ---
 
-## 8. Declaración de Uso de Inteligencia Artificial y Cacería de Alucinaciones
+## 1A. Declaración de Uso de Inteligencia Artificial y Cacería de Alucinaciones
 
 En cumplimiento de los lineamientos de transparencia académica del curso, el detalle exhaustivo de las interacciones con modelos de lenguaje de gran escala (LLMs) se encuentra documentado en los archivos auditables del repositorio:
 * **Registro de Uso de IA (`docs/uso_ia.md`):** Documenta la asistencia en la estructuración modular del paquete `creditrisk`, generación de plantillas `Makefile` y depuración de estilos en `Streamlit`. Toda la lógica de prevención de *data leakage*, partición temporal y validación estadística fue diseñada y verificada por los autores.
