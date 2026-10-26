@@ -157,9 +157,9 @@ Con nuestra configuración estándar ($S_0 = 600$, $\theta_0 = 19$ equivalente a
 
 ---
 
-## 5. Parte 1: Modelamiento de Probabilidad de Incumplimiento (PD)
+## 4. Parte 1: Modelamiento de Probabilidad de Incumplimiento (PD)
 
-### 5.1. Diseño Experimental y Búsqueda de Hiperparámetros
+### 4.1. Diseño Experimental y Búsqueda de Hiperparámetros
 Para garantizar una comparación justa entre familias de modelos, tanto la Regresión Logística como el MLP fueron sometidos a una exploración sistemática de hiperparámetros (`scripts/run_search.py`), seleccionando la configuración óptima exclusivamente según el **ROC-AUC en el conjunto de Validación** ($N = 34,988$). La **Tabla 2** resume los 11 experimentos ejecutados.
 
 **Tabla 2.** *Resultados de la búsqueda de hiperparámetros para Regresión Logística y Perceptrón Multicapa (MLP).*
@@ -184,14 +184,14 @@ Para garantizar una comparación justa entre familias de modelos, tanto la Regre
 1. **Superioridad de arquitecturas compactas sobre datos tabulares:** El modelo `MLP_2` con estructura piramidal $[64, 32]$ y activación suave `GELU` ($4,801$ parámetros) alcanza el mejor desempeño tanto en validación ($\text{AUC} = 0.6894$) como en prueba ($\text{AUC} = 0.6983$). Incrementar la capacidad a $43,649$ parámetros (`MLP_5`) no aporta ganancia discriminativa y requiere mayor regularización (`Dropout=0.4`) para evitar sobreajuste.
 2. **Impacto adverso del balanceo forzado sobre la calibración:** Los experimentos `LR_4`, `LR_5` y `MLP_6` (que ponderan artificialmente la clase minoritaria con $w_+ \approx 3.89$) mantienen un $\text{ROC-AUC}$ similar, pero **degradan severamente el Brier Score** de $\sim 0.176$ a $\sim 0.220$. Como se demostró en la Sección 4.1, alterar $w_+ \neq 1$ desplaza los *logits* hacia probabilidades cercanas a $0.50$, destruyendo la calibración necesaria para calcular provisiones financieras reales.
 
-### 5.2. Dinámica de Convergencia y Regularización del MLP
+### 4.2. Dinámica de Convergencia y Regularización del MLP
 La **Figura 2** ilustra la evolución de la función de pérdida BCE y del ROC-AUC por época para la configuración ganadora. Gracias al planificador `ReduceLROnPlateau` y a la detención temprana (*Early Stopping* con paciencia de 5 épocas), el entrenamiento converge en la época 15, alcanzando su óptimo generalizador en la **época 10** ($\text{Val AUC} = 0.6895$). La brecha controlada entre las curvas de entrenamiento y validación en la **Figura 2** confirma la ausencia de sobreajuste severo.
 
 ![Figura 2: Curvas de convergencia de pérdida BCE y evolución de ROC-AUC durante el entrenamiento del MLP.](../reports/figures/pd/fig2_curvas_entrenamiento_mlp.png)
 **Figura 2.** *Dinámica de convergencia de la pérdida Binary Cross-Entropy (izquierda) y evolución del ROC-AUC (derecha) por época para el modelo MLP [64, 32].*  
 *Fuente:* Elaboración propia a partir del historial `reports/tables/pd/mlp_training_history.csv`.
 
-### 5.3. Evaluación Comparativa en Conjunto de Prueba (*Out-of-Time*) y Poder Discriminante
+### 4.3. Evaluación Comparativa en Conjunto de Prueba (*Out-of-Time*) y Poder Discriminante
 Al evaluar ambos modelos sobre la cohorte futura ciega (`Test Set > 2014-12-01`, $N = 30,835$), el Perceptrón Multicapa supera consistentemente a la Regresión Logística en todas las métricas regulatorias, tal como se consolida en la **Tabla 3** y se visualiza en la **Figura 3**:
 * **ROC-AUC:** Sube de $0.6952$ (LogReg) a **$0.6983$ (MLP)** ($+31$ puntos básicos).
 * **Índice de Gini:** Sube de $0.3904$ a **$0.3966$** ($+62$ puntos básicos).
@@ -213,7 +213,7 @@ Al evaluar ambos modelos sobre la cohorte futura ciega (`Test Set > 2014-12-01`,
 **Figura 3.** *Comparación de curvas ROC (izquierda) y separación de distribuciones acumuladas KS (derecha) en el conjunto de prueba Out-of-Time ($N = 30,835$).*  
 *Fuente:* Elaboración propia mediante `scripts/make_figures.py` a partir de las predicciones de prueba (`reports/tables/pd/test_predictions.csv`).
 
-### 5.4. Calibración Probabilística, Estabilidad Estocástica (30 Semillas) y *Scorecard*
+### 4.4. Calibración Probabilística, Estabilidad Estocástica (30 Semillas) y *Scorecard*
 La **Figura 4** muestra la curva de confiabilidad (*Reliability Diagram*) sobre 10 bines cuantílicos en el conjunto de prueba. Se observa que ambas curvas siguen de cerca la diagonal de calibración perfecta, con una ligera subestimación sistemática ($\sim 3\%–4\%$) explicada por el cambio de régimen macroeconómico: los modelos aprendieron sobre una tasa base de incumplimiento del $20.46\%$ (2007–2014), mientras que la cohorte de prueba (2015) experimentó una tasa real del $25.46\%$.
 
 ![Figura 4: Curva de calibración probabilística (Reliability Diagram) en el conjunto de prueba.](../reports/figures/pd/fig4_curva_calibracion.png)
@@ -241,7 +241,7 @@ Al proyectar las probabilidades del MLP a la escala de **Scorecard $[300, 850]$*
 **Figura 5.** *Distribución de puntajes del Scorecard por estado crediticio (izquierda) y tasa de incumplimiento observada vs. predicha por banda de riesgo (derecha).*  
 *Fuente:* Elaboración propia mediante `scripts/make_figures.py` y `src/creditrisk/scorecard.py`.
 
-### 5.5. Interpretabilidad Post-Hoc (PFI) y Verificación de Hipótesis
+### 4.5. Interpretabilidad Post-Hoc (PFI) y Verificación de Hipótesis
 Dado que el MLP opera como una función compuesta no lineal, aplicamos **Importancia por Permutación de Características (*Permutation Feature Importance*, PFI)** (`src/creditrisk/interpretability.py`) sobre el conjunto de prueba con $R=5$ repeticiones por variable. Los resultados cuantitativos del Top 10 de predictores se presentan en la **Tabla 5** y se grafican en la **Figura 6**.
 
 **Tabla 5.** *Top 10 de variables con mayor importancia por permutación (PFI) sobre el ROC-AUC del modelo MLP en el conjunto de prueba.*
