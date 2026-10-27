@@ -1,6 +1,6 @@
 {
   "n_seeds": 30,
-  "total_time_s": 1337.6,
+  "total_time_s": 873.68,
   "n_parameters": 4801,
   "summary": [
     {
@@ -24,7 +24,7 @@
     {
       "metrica": "KS",
       "media": 0.2916,
-      "desviacion_std": 0.0024,
+      "desviacion_std": 0.0025,
       "mejor": 0.2957,
       "peor": 0.2862,
       "n_semillas": 30,

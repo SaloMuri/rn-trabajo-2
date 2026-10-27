@@ -55,11 +55,8 @@ def main(
     X_test = preprocessor.transform(test_df).astype(np.float32)
     y_test = test_df["target_pd"].values.astype(np.int64)
 
-    # Optimización de batch_size para correr las 30 semillas ágilmente en CPU
+    # Usar la configuración declarada para el MLP final en todas las semillas.
     mlp_cfg = dict(pd_cfg["mlp"])
-    mlp_cfg["batch_size"] = max(int(mlp_cfg.get("batch_size", 1024)), 2048)
-    mlp_cfg["epochs"] = min(int(mlp_cfg.get("epochs", 30)), 18)
-    mlp_cfg["patience"] = 4
 
     seed_records = []
     n_params = 0
