@@ -1,0 +1,27 @@
+{
+  "n_test": 30835,
+  "n_con_perdida_conocida": 25757,
+  "n_excluidos_default_o_late": 5078,
+  "pd_media_predicha_test": 0.23887932300567627,
+  "tasa_incumplimiento_observada_test_(target_pd)": 0.2546132641478839,
+  "pd_media_predicha_subconjunto": 0.22536815702915192,
+  "tasa_castigados_subconjunto": 0.10766005357766821,
+  "lgd_media_predicha_en_castigados": 0.9347594756246139,
+  "lgd_media_observada_en_castigados": 0.9807472017656902,
+  "perdida_realizada_total": 38666227.42090003,
+  "ead_mae_en_castigados": {
+    "A": 900.9843094121891,
+    "B": 3049.4400433446435
+  },
+  "ead_sesgo_medio_en_castigados_(pred-obs)": {
+    "A": 900.9843094121891,
+    "B": -2973.7840736896496
+  },
+  "el_total_A": 84935697.30439222,
+  "el_total_A_sobre_realizada": 2.1966378146962025,
+  "spearman_el_A_vs_realizada": 0.1758825906247575,
+  "el_total_B": 63927574.45143727,
+  "el_total_B_sobre_realizada": 1.6533181206316205,
+  "spearman_el_B_vs_realizada": 0.17362182783618668,
+  "ead_principal": "B"
+}
