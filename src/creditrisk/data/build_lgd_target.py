@@ -3,6 +3,7 @@
 Uso (desde la raíz del repositorio):
     python src/creditrisk/data/build_lgd_target.py
     python src/creditrisk/data/build_lgd_target.py --sample 50000   # demo rápida
+    python src/creditrisk/data/build_lgd_target.py --include-default  # análisis de sensibilidad
 """
 import argparse
 from pathlib import Path
@@ -13,6 +14,11 @@ CHARGED_OFF = [
     "Charged Off",
     "Does not meet the credit policy. Status:Charged Off",
 ]
+# Incumplimiento sin castigo contable: el cobro aún no empieza (recoveries == 0),
+# por lo que su LGD es 1 por construcción (dato censurado). Solo para sensibilidad.
+DEFAULT_STATUS = ["Default"]
+OUT_MAIN = "data/processed/lgd/lgd_target.parquet"
+OUT_WITH_DEFAULT = "data/processed/lgd/lgd_target_with_default.parquet"
 COLS = [
     "id",
     "loan_status",
@@ -25,9 +31,14 @@ COLS = [
 ]
 
 
-def build_lgd_target(df: pd.DataFrame) -> pd.DataFrame:
-    """Recibe el loan.csv (con COLS) y devuelve un DataFrame con la LGD."""
-    d = df[df["loan_status"].isin(CHARGED_OFF)].copy()
+def build_lgd_target(df: pd.DataFrame, include_default: bool = False) -> pd.DataFrame:
+    """Recibe el loan.csv (con COLS) y devuelve un DataFrame con la LGD.
+
+    include_default=False (versión principal): solo créditos castigados (Charged Off).
+    include_default=True (sensibilidad): añade también los de estado Default.
+    """
+    statuses = CHARGED_OFF + (DEFAULT_STATUS if include_default else [])
+    d = df[df["loan_status"].isin(statuses)].copy()
 
     # Parseo robusto de fechas
     d["issue_date"] = pd.to_datetime(d["issue_d"], format="%b-%Y", errors="coerce")
@@ -52,6 +63,7 @@ def build_lgd_target(df: pd.DataFrame) -> pd.DataFrame:
 
     keep = [
         "id",
+        "loan_status",
         "issue_date",
         "issue_year",
         "term",
@@ -69,7 +81,16 @@ def build_lgd_target(df: pd.DataFrame) -> pd.DataFrame:
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--raw", default="data/raw/loan.csv")
-    p.add_argument("--out", default="data/processed/lgd/lgd_target.parquet")
+    p.add_argument(
+        "--out",
+        default=None,
+        help=f"por defecto {OUT_MAIN}, o {OUT_WITH_DEFAULT} con --include-default",
+    )
+    p.add_argument(
+        "--include-default",
+        action="store_true",
+        help="incluye también los créditos en estado Default (análisis de sensibilidad)",
+    )
     p.add_argument(
         "--sample",
         type=int,
@@ -81,13 +102,15 @@ def main():
     df = pd.read_csv(
         a.raw, usecols=COLS, low_memory=False, nrows=a.sample or None
     )
-    out = build_lgd_target(df)
+    out = build_lgd_target(df, include_default=a.include_default)
 
-    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    out.to_parquet(a.out, index=False)
+    out_path = a.out or (OUT_WITH_DEFAULT if a.include_default else OUT_MAIN)
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    out.to_parquet(out_path, index=False)
     print(f"Filas leídas: {len(df):,} | créditos con LGD: {len(out):,}")
+    print(out.groupby("loan_status").lgd.agg(["count", "mean"]).round(3).to_string())
     print(f"LGD media: {out.lgd.mean():.3f} | LGD == 1: {(out.lgd >= 1).mean():.1%}")
-    print(f"Guardado en {a.out}")
+    print(f"Guardado en {out_path}")
 
 
 if __name__ == "__main__":
