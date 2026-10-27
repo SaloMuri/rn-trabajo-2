@@ -1,0 +1,5 @@
+Modelo,Parámetros,Tiempo_s,Val_MAE,Val_RMSE,Test_MAE,Test_RMSE,Test_MAE_sinDefault,Test_RMSE_sinDefault
+Constante (media train),1,0.0,0.0771,0.084,0.0807,0.0922,0.0807,0.0922
+Regresión lineal (referencia),39,0.06,0.0752,0.0831,0.078,0.0924,0.078,0.0924
+MLP sigmoide+BCE (C),4609,6.9,0.071,0.0798,0.07,0.0863,0.07,0.0863
+"MLP sigmoide+MSE (B, contraste)",4609,7.5,0.0724,0.0805,0.0721,0.0866,0.0721,0.0866
