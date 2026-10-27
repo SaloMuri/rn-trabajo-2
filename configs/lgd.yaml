@@ -1,1 +1,73 @@
-# TODO: parámetros de la Parte 2 (arquitectura, función de pérdida, activación de salida, etc.)
+# configs/lgd.yaml — Parte 2 (LGD). Se fusiona sobre configs/base.yaml.
+# Cualquier valor se puede cambiar sin editar código:
+#   python scripts/run_lgd.py --set mlp.lr=0.003 --set mlp.hidden_dims=[128,64]
+seed: 42
+
+lgd_data:
+  population: main              # main = solo Charged Off | with_default = + Default (sensibilidad)
+  paths:
+    main: "data/processed/lgd/lgd_target.parquet"
+    with_default: "data/processed/lgd/lgd_target_with_default.parquet"
+  sample_fraction: 1.0          # <1.0 = modo demo (muestra de cada partición)
+
+baseline:
+  clip: true                    # recorta la regresión lineal a [0, 1]
+  alpha: null                   # null = OLS; un número = Ridge (lo fija la búsqueda en lgd_best.yaml)
+
+# Opción C (principal): salida sigmoide + entropía cruzada binaria (cuasi-verosimilitud).
+mlp:
+  loss: bce                     # bce | mse
+  hidden_dims: [64, 32]
+  activation: "relu"            # relu, gelu, selu, tanh
+  dropout: 0.15
+  use_batchnorm: true
+  optimizer: adamw              # adamw | adam | sgd | rmsprop
+  init_output_bias: true        # sesgo de salida = logit(media del train)
+  lr: 0.001
+  weight_decay: 0.0001          # regularización L2 (AdamW)
+  batch_size: 512
+  epochs: 60
+  patience: 8                   # parada temprana sobre el RMSE de validación
+
+# Opción B (contraste): misma red, salida sigmoide + MSE. Solo cambia la pérdida.
+contrast_mlp:
+  loss: mse
+
+# Semillas para la configuración final (scripts/run_seeds_lgd.py): first_seed ... first_seed+n_seeds-1
+seeds:
+  n_seeds: 30
+  first_seed: 0
+
+# Búsqueda de hiperparámetros (scripts/run_search_lgd.py). La selección se hace SOLO con el
+# RMSE de validación; el test no se usa en la búsqueda.
+search:
+  n_mlp_configs: 60             # configuraciones del MLP (búsqueda aleatoria)
+  ridge_alphas: 12              # valores de alpha de la Ridge (rejilla logarítmica)
+  ridge_alpha_range: [0.01, 10000.0]
+  declared_prior_trials: 1      # pruebas manuales previas con --set (se declaran en el presupuesto)
+  best_config_path: "configs/lgd_best.yaml"
+  space:
+    hidden_dims: [[32], [64], [64, 32], [128, 64], [128, 64, 32], [256, 128], [256, 128, 64]]
+    activation: [relu, gelu, tanh, selu]
+    dropout: [0.0, 0.1, 0.2, 0.3, 0.4]
+    use_batchnorm: [true, false]
+    batch_size: [256, 512, 1024, 2048]
+    optimizer: [adamw, adam, sgd, rmsprop]
+    lr_range:                   # SGD necesita tasas mayores que los optimizadores adaptativos
+      adamw: [0.0003, 0.01]
+      adam: [0.0003, 0.01]
+      rmsprop: [0.0001, 0.003]
+      sgd: [0.01, 0.1]
+    weight_decay_range: [0.000001, 0.01]
+
+# Pérdida esperada E[L] = PD * LGD * EAD (scripts/run_expected_loss.py)
+expected_loss:
+  pd_model: "models/pd/mlp_best.pt"                 # MLP de PD de la Parte 1
+  pd_preprocessor: "models/pd/preprocessor.joblib"
+  lgd_model: "models/lgd/main/mlp_bce.pt"           # sale de: python scripts/run_lgd.py --best
+  lgd_preprocessor: "models/lgd/main/preprocessor.joblib"
+  ead_primary: "B"                                  # B = monto x razón por plazo | A = monto (sensibilidad)
+
+output:
+  models_dir: "models/lgd"
+  tables_dir: "reports/tables/lgd"

@@ -1,0 +1,11 @@
+# Modo demostración de la Parte 2 (< 2 min): muestra de los datos y pocas épocas.
+#   python scripts/run_lgd.py --demo
+lgd_data:
+  sample_fraction: 0.25
+mlp:
+  epochs: 8
+  patience: 3
+  batch_size: 1024
+output:
+  models_dir: "models/lgd_demo"
+  tables_dir: "reports/tables/lgd_demo"
