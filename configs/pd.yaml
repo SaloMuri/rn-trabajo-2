@@ -24,3 +24,19 @@ scorecard:
   base_score: 600.0      # Puntaje de referencia (P0)
   base_odds: 19.0        # Odds Bueno:Malo de referencia (19:1 equivale a PD = 5%)
   pdo: 20.0              # Puntos para duplicar las odds de buen pagador
+
+search:
+  lr_grid:
+    - {C: 0.001, class_weight: null}
+    - {C: 0.01,  class_weight: null}
+    - {C: 0.1,   class_weight: null}
+    - {C: 1.0,   class_weight: null}
+    - {C: 10.0,  class_weight: null}
+    - {C: 1.0,   class_weight: balanced}
+  mlp_grid:
+    - {hidden_dims: [64, 32],      activation: relu, dropout: 0.15, lr: 0.001,  weight_decay: 0.0001}
+    - {hidden_dims: [128, 64],     activation: relu, dropout: 0.25, lr: 0.001,  weight_decay: 0.0001}
+    - {hidden_dims: [128, 64, 32], activation: relu, dropout: 0.25, lr: 0.001,  weight_decay: 0.0001}
+    - {hidden_dims: [128, 64, 32], activation: gelu, dropout: 0.25, lr: 0.001,  weight_decay: 0.0001}
+    - {hidden_dims: [256, 128, 64], activation: relu, dropout: 0.35, lr: 0.0005, weight_decay: 0.0005}
+    - {hidden_dims: [128, 64, 32], activation: tanh, dropout: 0.20, lr: 0.001,  weight_decay: 0.0001}

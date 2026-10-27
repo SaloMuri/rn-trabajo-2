@@ -12,7 +12,7 @@ temporal_split:
   val_end: "2014-12-01"     # Julio 2014 a Dic 2014 -> Validación (Early stopping / Hiperparámetros)
                             # Enero 2015 en adelante -> Test Out-of-Time
 
-# Variables estrictamente disponibles en el momento de la solicitud (Originación)
+# Variables disponibles en el momento operativo definido: oferta evaluada/asignada, antes de financiar
 features_pd:
   numeric:
     - loan_amnt # Monto del préstamo

@@ -20,7 +20,7 @@ from creditrisk.models.baseline_pd import LogisticPDModel
 from creditrisk.models.mlp import predict_proba_mlp, save_mlp_checkpoint, train_pd_mlp
 from creditrisk.scorecard import CreditScorecard
 from creditrisk.seeding import set_all_seeds
-
+from creditrisk.config import load_config
 
 def load_split_df(processed_dir: str, split_name: str, fmt: str) -> pd.DataFrame:
     path = os.path.join(processed_dir, f"{split_name}.{fmt}")
@@ -29,14 +29,9 @@ def load_split_df(processed_dir: str, split_name: str, fmt: str) -> pd.DataFrame
     return pd.read_csv(path, low_memory=False)
 
 
-def main(
-    base_cfg_path: str = "configs/base.yaml",
-    pd_cfg_path: str = "configs/pd.yaml",
-) -> None:
-    with open(base_cfg_path, "r", encoding="utf-8") as f:
-        base_cfg = yaml.safe_load(f)
-    with open(pd_cfg_path, "r", encoding="utf-8") as f:
-        pd_cfg = yaml.safe_load(f)
+def main(base_cfg_path="configs/base.yaml", pd_cfg_path="configs/pd.yaml", overrides=None):
+    cfg = load_config([base_cfg_path, pd_cfg_path], overrides)
+    base_cfg = pd_cfg = cfg   # config fusionada (base + pd + overrides)
 
     seed = int(pd_cfg.get("seed", base_cfg.get("seed", 42)))
     set_all_seeds(seed)
@@ -179,6 +174,8 @@ def main(
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Ejecuta el experimento PD.")
-    parser.add_argument("--config", type=str, default="configs/pd.yaml", help="Ruta al archivo YAML de configuración PD o demo.")
+    parser.add_argument("--config", type=str, default="configs/pd.yaml", help="YAML de PD o de demo.")
+    parser.add_argument("--set", nargs="*", default=[], metavar="clave=valor",
+                        help="Sobrescribe parámetros, p. ej. --set mlp.dropout=0.3 scorecard.pdo=30")
     args = parser.parse_args()
-    main(base_cfg_path="configs/base.yaml", pd_cfg_path=args.config)
+    main("configs/base.yaml", args.config, args.set)

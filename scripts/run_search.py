@@ -6,6 +6,8 @@ import sys
 import time
 from pathlib import Path
 
+from torch import overrides
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import joblib
@@ -17,6 +19,7 @@ from creditrisk.metrics import evaluate_pd_metrics
 from creditrisk.models.baseline_pd import LogisticPDModel
 from creditrisk.models.mlp import predict_proba_mlp, train_pd_mlp
 from creditrisk.seeding import set_all_seeds
+from creditrisk.config import load_config
 
 
 def load_split_df(processed_dir: str, split_name: str, fmt: str) -> pd.DataFrame:
@@ -24,9 +27,8 @@ def load_split_df(processed_dir: str, split_name: str, fmt: str) -> pd.DataFrame
     return pd.read_parquet(path) if fmt == "parquet" else pd.read_csv(path, low_memory=False)
 
 
-def main(base_cfg_path: str = "configs/base.yaml") -> None:
-    with open(base_cfg_path, "r", encoding="utf-8") as f:
-        base_cfg = yaml.safe_load(f)
+def main(base_cfg_path="configs/base.yaml", pd_cfg_path="configs/pd.yaml", overrides=None):
+    base_cfg = load_config([base_cfg_path, pd_cfg_path], overrides)
 
     seed = int(base_cfg.get("seed", 42))
     set_all_seeds(seed)
@@ -47,14 +49,7 @@ def main(base_cfg_path: str = "configs/base.yaml") -> None:
     records = []
 
     # 1. Búsqueda en Regresión Logística (6 configuraciones)
-    lr_grid = [
-        {"C": 0.001, "class_weight": None},
-        {"C": 0.01, "class_weight": None},
-        {"C": 0.1, "class_weight": None},
-        {"C": 1.0, "class_weight": None},
-        {"C": 10.0, "class_weight": None},
-        {"C": 1.0, "class_weight": "balanced"},
-    ]
+    lr_grid = base_cfg["search"]["lr_grid"]
 
     print(f"[Search] Evaluando {len(lr_grid)} configuraciones de Regresión Logística...")
     for idx, cfg in enumerate(lr_grid, 1):
@@ -80,14 +75,7 @@ def main(base_cfg_path: str = "configs/base.yaml") -> None:
         )
 
     # 2. Búsqueda en Perceptrón Multicapa (6 configuraciones)
-    mlp_grid = [
-        {"hidden_dims": [64, 32], "activation": "relu", "dropout": 0.15, "lr": 1e-3, "weight_decay": 1e-4},
-        {"hidden_dims": [128, 64], "activation": "relu", "dropout": 0.25, "lr": 1e-3, "weight_decay": 1e-4},
-        {"hidden_dims": [128, 64, 32], "activation": "relu", "dropout": 0.25, "lr": 1e-3, "weight_decay": 1e-4},
-        {"hidden_dims": [128, 64, 32], "activation": "gelu", "dropout": 0.25, "lr": 1e-3, "weight_decay": 1e-4},
-        {"hidden_dims": [256, 128, 64], "activation": "relu", "dropout": 0.35, "lr": 5e-4, "weight_decay": 5e-4},
-        {"hidden_dims": [128, 64, 32], "activation": "tanh", "dropout": 0.20, "lr": 1e-3, "weight_decay": 1e-4},
-    ]
+    mlp_grid = base_cfg["search"]["mlp_grid"]
 
     print(f"[Search] Evaluando {len(mlp_grid)} configuraciones de MLP...")
     for idx, cfg in enumerate(mlp_grid, 1):
@@ -124,4 +112,10 @@ def main(base_cfg_path: str = "configs/base.yaml") -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description="Ejecuta el experimento PD.")
+    parser.add_argument("--config", type=str, default="configs/pd.yaml", help="YAML de PD o de demo.")
+    parser.add_argument("--set", nargs="*", default=[], metavar="clave=valor",
+                        help="Sobrescribe parámetros, p. ej. --set mlp.dropout=0.3 scorecard.pdo=30")
+    args = parser.parse_args()
+    main("configs/base.yaml", args.config, args.set)

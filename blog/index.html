@@ -311,9 +311,8 @@
 <hr />
 <h2 id="2-caso-de-uso-y-formulacion-del-problema-de-negocio">2. Caso de Uso y Formulación del Problema de Negocio</h2>
 <h3 id="21-contexto-operativo">2.1. Contexto Operativo</h3>
-<p>Consideremos el comité de riesgo de crédito de una entidad originadora de préstamos de consumo. Cuando un solicitante demanda un crédito por un monto $M$ a un plazo de 36 o 60 meses, el sistema de originación debe responder dos preguntas críticas en tiempo real:
-1. <strong>Decisión de Originación y <em>Pricing</em>:</strong> ¿Cuál es la probabilidad $\hat{p}_i = \mathbb{P}(Y_i = 1 \mid \mathbf{x}_i)$ de que el deudor incumpla sus obligaciones contractuales antes del vencimiento?
-2. <strong>Clasificación en Escala Maestra de Riesgo (<em>Scorecard</em>):</strong> ¿Cómo transformar dicha probabilidad en un puntaje crediticio continuo (S_i), comprensible para analistas de crédito y útil para apoyar la evaluación del riesgo de cada solicitud?</p>
+<p>El modelo lo usa el analista de riesgo de crédito de un <em>marketplace</em> de préstamos de consumo, como Lending Club, para apoyar la decisión de <strong>financiar, enviar a revisión manual o no financiar un préstamo que ya pasó por la evaluación inicial y tiene condiciones de oferta asignadas</strong>. Esta definición es importante: el modelo no pretende decidir desde cero si una solicitud inicial debe recibir una tasa y una calificación, sino estimar el riesgo en el momento posterior a esa asignación y anterior al desembolso. La pregunta que responde es: ¿cuál es la probabilidad $\hat{p}_i = \mathbb{P}(Y_i = 1 \mid \mathbf{x}_i)$ de que el solicitante incumpla? Esa probabilidad se transforma en un puntaje de <em>scorecard</em> $S_i$, comprensible para el analista.</p>
+<p>La información disponible en ese momento incluye los datos de la solicitud y del historial crediticio, junto con las condiciones de la oferta que la plataforma ya fijó: monto, plazo, tasa de interés (<code>int_rate</code>), calificación (<code>grade</code>) y cuota (<code>installment</code>). No interpretamos <code>int_rate</code> ni <code>grade</code> como equivalentes ni como proxies directos del puntaje externo FICO, que no está disponible en el conjunto. Son condiciones de precio y una calificación interna asignadas por la plataforma, que pueden condensar parte de su evaluación previa del riesgo. Por tanto, el modelo estima el riesgo <em>condicionado</em> a la oferta ya evaluada y fijada, no el riesgo desde el primer instante de la solicitud. Esta definición limita su uso a un momento posterior a la asignación de esas condiciones y anterior a la financiación. No se usan variables registradas después de la originación (pagos, recuperaciones, saldos pendientes).</p>
 <h3 id="22-costos-de-error-asimetricos">2.2. Costos de Error Asimétricos</h3>
 <p>En el otorgamiento de crédito, los errores de clasificación tienen impactos financieros fuertemente asimétricos:
 * <strong>Falso Negativo (Aprobar a un deudor que entra en <em>default</em>):</strong> Implica la pérdida directa del capital no recuperado ($\text{LGD} \cdot \text{EAD}$), la cual suele oscilar entre el $50\%$ y el $85\%$ del principal desembolsado.
@@ -323,12 +322,12 @@
 <hr />
 <h2 id="3-datos-prevencion-de-fuga-de-informacion-data-leakage-e-hipotesis">3. Datos, Prevención de Fuga de Información (<em>Data Leakage</em>) e Hipótesis</h2>
 <h3 id="31-construccion-de-la-variable-objetivo-y-filtrado-del-universo">3.1. Construcción de la Variable Objetivo y Filtrado del Universo</h3>
-<p>El conjunto de datos original de <em>LendingClub</em> (<code>accepted_2007_to_2018Q4.csv</code>) contiene <strong>887,379 registros</strong> y <strong>74 variables</strong>. Para construir un problema de clasificación binaria libre de sesgo de supervivencia, se filtraron exclusivamente los préstamos con desenlace crediticio definitivo:
-* <strong>Buenos Pagadores ($Y = 0$):</strong> Estado <code>Fully Paid</code>.
-* <strong>Incumplimiento / Default ($Y = 1$):</strong> Estados <code>Charged Off</code>, <code>Default</code>, <code>Does not meet the credit policy. Status:Charged Off</code> y mora severa <code>Late (31-120 days)</code>.</p>
-<p>Los préstamos activos (<code>Current</code>, <code>In Grace Period</code>, <code>Issued</code>) equivalentes a <strong>618,849 registros</strong> fueron excluidos del modelado de PD debido a que su estado final aún no es observable (censura por la derecha). El universo limpio resultante consta exactamente de <strong>268,530 préstamos cerrados</strong> originados entre junio de 2007 y diciembre de 2015, con una <strong>tasa global de incumplimiento del 21.90%</strong>.</p>
+<p>El conjunto de datos original (<code>loan.csv</code>, <em>Credit Risk Analysis</em>, Kaggle) contiene <strong>887.379 registros</strong> y <strong>74 variables</strong>, con créditos originados entre junio de 2007 y diciembre de 2015. La variable objetivo se codificó según la guía del trabajo:
+* <strong>Buenos pagadores ($Y=0$):</strong> <code>Fully Paid</code> (207.723) y <code>Does not meet the credit policy. Status:Fully Paid</code> (1.988).
+* <strong>Malos pagadores ($Y=1$):</strong> <code>Charged Off</code> (45.248), <code>Default</code> (1.219), <code>Late (31-120 days)</code> (11.591) y <code>Does not meet the credit policy. Status:Charged Off</code> (761).</p>
+<p>Se excluyeron <strong>618.849 registros</strong> sin desenlace conocido: <code>Current</code> (601.779), <code>Issued</code> (8.460), <code>In Grace Period</code> (6.253) y <code>Late (16-30 days)</code> (2.357). Quedan <strong>268.530 créditos</strong> con tasa global de incumplimiento de <strong>21,90 %</strong>. Esta exclusión introduce censura por la derecha en los créditos recientes (ver 3.2).</p>
 <h3 id="32-auditoria-anti-leakage-y-particion-temporal-out-of-time">3.2. Auditoría Anti-<em>Leakage</em> y Partición Temporal (<em>Out-of-Time</em>)</h3>
-<p>Uno de los errores metodológicos más graves en la literatura aplicada sobre <em>LendingClub</em> es incluir variables registradas <em>después</em> de la originación o después del evento de mora (por ejemplo: <code>recoveries</code>, <code>total_rec_prncp</code>, <code>last_pymnt_amnt</code>, <code>out_prncp</code>). Nuestro pipeline (<code>src/creditrisk/data/features.py</code>) restringe estrictamente el espacio de entrada a <strong>19 variables ex-ante</strong> conocidas al instante de la solicitud (ver detalle completo en la <strong>Tabla 1</strong>), las cuales tras el preprocesamiento y codificación <em>One-Hot</em> de variables categóricas se expanden a una matriz numérica de <strong>$D = 38$ características</strong> (conformando un dataset limpio de 23 columnas al incluir metadatos de fecha y estado).</p>
+<p>Uno de los errores metodológicos más graves en la literatura aplicada sobre <em>LendingClub</em> es incluir variables registradas <em>después</em> de la originación o después del evento de mora (por ejemplo: <code>recoveries</code>, <code>total_rec_prncp</code>, <code>last_pymnt_amnt</code>, <code>out_prncp</code>). Nuestro pipeline (<code>src/creditrisk/data/features.py</code>) restringe el espacio de entrada a <strong>20 variables</strong> definidas como disponibles en el momento operativo descrito en la Sección 2.1 —después de asignar las condiciones de oferta y antes de financiar— (ver detalle completo en la <strong>Tabla 1</strong>), las cuales tras el preprocesamiento y codificación <em>One-Hot</em> de variables categóricas se expanden a una matriz numérica de <strong>$D = 38$ características</strong> (conformando un dataset limpio de 23 columnas al incluir metadatos de fecha y estado).</p>
 <p><strong>Tabla 1.</strong> <em>Resumen de la construcción del universo de datos y partición temporal Out-of-Time para el modelo PD.</em></p>
 <table>
 <thead>
@@ -348,7 +347,7 @@
 <td style="text-align: center;">$202,707$</td>
 <td style="text-align: center;">$75.49\%$</td>
 <td style="text-align: center;">$20.46\%$</td>
-<td style="text-align: left;">Ajuste de pesos ($\mathbf{W}$), escaladores y cuantiles de referencia PSI</td>
+<td style="text-align: left;">Ajuste de pesos ($\mathbf{W}$), escaladores</td>
 </tr>
 <tr>
 <td style="text-align: left;"><strong>Validación (<em>Val Set</em>)</strong></td>
@@ -377,7 +376,8 @@
 </tbody>
 </table>
 <p><em>Fuente:</em> Elaboración propia a partir de la ejecución del pipeline de datos (<code>src/creditrisk/data/build_dataset.py</code>) sobre el dataset de <em>LendingClub</em> (2007–2015).</p>
-<p>Asimismo, en lugar de una partición aleatoria que mezclaría el futuro con el pasado, implementamos una <strong>partición estrictamente temporal (<em>Out-of-Time Split</em>)</strong> basada en la fecha de emisión (<code>issue_d</code>), cuyos volúmenes y tasas de incumplimiento se detallan en la <strong>Tabla 1</strong>. Se observa un desplazamiento temporal real (<em>covariate &amp; prior shift</em>): las cohortes más recientes (2014–2015) presentan tasas de incumplimiento superiores ($25.46\%–27.12\%$) frente al histórico previo ($20.46\%$), lo cual somete a los modelos a una prueba realista de estrés operacional.</p>
+<p>Asimismo, en lugar de una partición aleatoria que mezclaría el futuro con el pasado, implementamos una <strong>partición estrictamente temporal (<em>Out-of-Time Split</em>)</strong> basada en la fecha de emisión (<code>issue_d</code>), cuyos volúmenes y tasas de incumplimiento se detallan en la <strong>Tabla 1</strong>. </p>
+<p>Las tasas de incumplimiento difieren entre particiones (20,46 %, 27,12 % y 25,46 %), pero esa diferencia no debe leerse directamente como un cambio en el comportamiento de los clientes. Los créditos recientes solo tienen desenlace observado si ya se pagaron o ya incumplieron; los vigentes (<code>Current</code>) quedan excluidos. La proporción de créditos con una etiqueta PD clasificable cae de 93,3 % (originados en 2012) a 54,3 % (2013), 31,5 % (2014) y 7,3 % (2015), mientras que la tasa de malos entre los créditos etiquetados es 16,7 %, 22,9 %, 26,2 % y 25,5 %, respectivamente (<code>reports/tables/pd/censura_por_anio.csv</code>, generado con <code>scripts/censura_etiquetas.py</code>). Aquí “con etiqueta PD” significa que <code>loan_status</code> se asignó a 0 o 1 según la codificación de la guía; no significa necesariamente que el historial del préstamo haya terminado, porque <code>Late (31-120 days)</code> se etiqueta como malo por definición del ejercicio. Una explicación plausible es que los incumplimientos se etiqueten antes que los créditos que terminan pagándose por completo, de modo que la muestra etiquetada de los años recientes tenga una proporción mayor de malos; este trabajo no contrasta directamente esa explicación. La tabla evidencia que la disponibilidad de etiquetas cambia fuertemente por cohorte, pero no elimina ni corrige el posible sesgo de selección por censura. Por ello, el aumento de la tasa en validación y prueba puede deberse, al menos en parte, a la censura y no a un cambio real del riesgo.</p>
 <h3 id="33-hipotesis-del-analisis-exploratorio">3.3. Hipótesis del análisis exploratorio</h3>
 <p>El análisis exploratorio busca identificar relaciones entre las características de los solicitantes y el incumplimiento crediticio (<em>default</em>). A partir de la teoría financiera y la exploración estadística del conjunto de entrenamiento ($N = 202,707$ préstamos cerrados en <code>train.parquet</code>), se plantean tres hipótesis explícitas y falsables que orientan el análisis, pero no implican que las relaciones observadas sean causales. </p>
 <p>Estas hipótesis se contrastarán mediante estadísticas descriptivas, visualizaciones y pruebas de asociación, y serán reevaluadas al final del modelamiento mediante análisis estadístico e Importancia por Permutación (PFI).</p>
@@ -393,6 +393,7 @@
 <h2 id="4-parte-1-modelamiento-de-probabilidad-de-incumplimiento-pd">4. Parte 1: Modelamiento de Probabilidad de Incumplimiento (PD)</h2>
 <h3 id="41-diseno-experimental-y-busqueda-de-hiperparametros">4.1. Diseño Experimental y Búsqueda de Hiperparámetros</h3>
 <p>Para comparar ambas familias de modelos, se realizó una búsqueda de hiperparámetros mediante <code>scripts/run_search.py</code>. Se evaluaron seis configuraciones de Regresión Logística y seis de Perceptrón Multicapa (MLP), utilizando el ROC-AUC del conjunto de validación ((N = 34{,}988)) como principal criterio de comparación. La Tabla 2 presenta los resultados de las 12 configuraciones. Aunque <code>MLP_4</code> obtuvo el mayor ROC-AUC de validación, la evaluación final se realizó con la configuración <code>MLP_1</code>, que tiene una arquitectura más pequeña y menor tiempo de entrenamiento registrado. Por tanto, <code>MLP_1</code> se presenta como la configuración utilizada en la evaluación final, no como la ganadora absoluta de la búsqueda por ROC-AUC.</p>
+<p>Para ambas familias se aplicó la misma regla: se elige la configuración más simple (menos parámetros) cuyo ROC-AUC de validación esté a menos de 0,002 del mejor de su familia. En la regresión logística todas las configuraciones tienen 39 parámetros y su AUC de validación varía menos de 0,001, por lo que se conservó <code>C=1,0</code>; en el MLP, <code>MLP_1</code> (0,7146) cumple la regla frente a <code>MLP_4</code> (0,7160).</p>
 <p><strong>Tabla 2.</strong> <em>Resultados de la búsqueda de hiperparámetros para Regresión Logística y Perceptrón Multicapa (MLP).</em></p>
 <table>
 <thead>
@@ -414,7 +415,7 @@
 <td style="text-align: left;">Regresión Logística</td>
 <td style="text-align: left;">C=0.001; sin ponderación</td>
 <td style="text-align: right;">39</td>
-<td style="text-align: right;">0.42</td>
+<td style="text-align: right;">0.30</td>
 <td style="text-align: right;">0.7089</td>
 <td style="text-align: right;">0.4178</td>
 <td style="text-align: right;">0.3081</td>
@@ -480,7 +481,7 @@
 <td style="text-align: left;">MLP</td>
 <td style="text-align: left;">Capas [64, 32]; ReLU; dropout 0.15; LR=0.001</td>
 <td style="text-align: right;">4.801</td>
-<td style="text-align: right;">20.99</td>
+<td style="text-align: right;">22.02</td>
 <td style="text-align: right;">0.7146</td>
 <td style="text-align: right;">0.4292</td>
 <td style="text-align: right;">0.3139</td>
@@ -491,7 +492,7 @@
 <td style="text-align: left;">MLP</td>
 <td style="text-align: left;">Capas [128, 64]; ReLU; dropout 0.25; LR=0.001</td>
 <td style="text-align: right;">13.697</td>
-<td style="text-align: right;">24.31</td>
+<td style="text-align: right;">19.62</td>
 <td style="text-align: right;">0.7143</td>
 <td style="text-align: right;">0.4286</td>
 <td style="text-align: right;">0.3149</td>
@@ -513,7 +514,7 @@
 <td style="text-align: left;">MLP</td>
 <td style="text-align: left;">Capas [128, 64, 32]; GELU; dropout 0.25; LR=0.001</td>
 <td style="text-align: right;">15.809</td>
-<td style="text-align: right;">51.76</td>
+<td style="text-align: right;">36.59</td>
 <td style="text-align: right;">0.7160</td>
 <td style="text-align: right;">0.4321</td>
 <td style="text-align: right;">0.3146</td>
@@ -524,7 +525,7 @@
 <td style="text-align: left;">MLP</td>
 <td style="text-align: left;">Capas [256, 128, 64]; ReLU; dropout 0.35; LR=0.0005</td>
 <td style="text-align: right;">52.097</td>
-<td style="text-align: right;">70.30</td>
+<td style="text-align: right;">45.52</td>
 <td style="text-align: right;">0.7154</td>
 <td style="text-align: right;">0.4308</td>
 <td style="text-align: right;">0.3151</td>
@@ -535,7 +536,7 @@
 <td style="text-align: left;">MLP</td>
 <td style="text-align: left;">Capas [128, 64, 32]; tanh; dropout 0.20; LR=0.001</td>
 <td style="text-align: right;">15.809</td>
-<td style="text-align: right;">52.05</td>
+<td style="text-align: right;">27.98</td>
 <td style="text-align: right;">0.7122</td>
 <td style="text-align: right;">0.4244</td>
 <td style="text-align: right;">0.3143</td>
@@ -547,7 +548,7 @@
 <p><strong>Hallazgos de la búsqueda de hiperparámetros (Tabla 2):</strong></p>
 <ol>
 <li>
-<p><strong>Mayor AUC de validación:</strong> la configuración <code>MLP_4</code>, con capas <code>[128, 64, 32]</code> y activación GELU, obtiene el AUC de validación más alto de las configuraciones evaluadas (0.7160). Sin embargo, requiere un tiempo registrado de 51.76 segundos, frente a 20.99 segundos para <code>MLP_1</code>, cuya arquitectura <code>[64, 32]</code> tiene 4,801 parámetros entrenables.</p>
+<p><strong>Mayor AUC de validación:</strong> la configuración <code>MLP_4</code>, con capas <code>[128, 64, 32]</code> y activación GELU, obtiene el AUC de validación más alto de las configuraciones evaluadas (0.7160). Su tiempo de entrenamiento registrado es de 36.59 segundos, frente a 22.02 segundos para <code>MLP_1</code>, cuya arquitectura <code>[64, 32]</code> tiene 4.801 parámetros entrenables.</p>
 </li>
 <li>
 <p><strong>Efecto de la ponderación de clases en la calibración:</strong> la configuración logística <code>LR_6</code>, con <code>class_weight=balanced</code>, obtiene un Brier Score de 0.2257, superior al de las configuraciones logísticas sin ponderación (entre 0.1793 y 0.1795). En este experimento, la ponderación balanceada empeora el Brier Score; este resultado no demuestra por sí solo que la causa sea un desplazamiento específico de los logits ni que el mismo efecto ocurra en todas las configuraciones.</p>
@@ -665,7 +666,7 @@
 <strong>Figura 5.</strong> <em>Distribución de puntajes del Scorecard por estado crediticio (izquierda) y tasa de incumplimiento observada por decil de puntaje (derecha).</em> 
 <em>Fuente:</em> Elaboración propia mediante <code>scripts/make_figures.py</code> y <code>src/creditrisk/scorecard.py</code>.</p>
 <h3 id="45-interpretabilidad-post-hoc-pfi-y-verificacion-de-hipotesis">4.5. Interpretabilidad Post-Hoc (PFI) y Verificación de Hipótesis</h3>
-<p>Para interpretar el modelo MLP se empleó la importancia por permutación (<em>Permutation Feature Importance</em>, PFI), utilizando la disminución del AUC en el conjunto de evaluación al alterar los valores de cada variable. Una mayor disminución indica que el modelo depende más de esa característica para discriminar entre solicitantes que incumplen y aquellos que no lo hacen. Esta medida refleja la importancia de una variable para el modelo, pero no implica causalidad.</p>
+<p>Para interpretar el modelo MLP se empleó la importancia por permutación (<em>Permutation Feature Importance</em>, PFI) (Breiman, 2001; Fisher, Rudin, &amp; Dominici, 2019), utilizando la disminución del AUC en el conjunto de evaluación al alterar los valores de cada variable. Una mayor disminución indica que el modelo depende más de esa característica para discriminar entre solicitantes que incumplen y aquellos que no lo hacen. Esta medida refleja la importancia de una variable para el modelo, pero no implica causalidad.</p>
 <p>Los resultados registrados en <code>reports/tables/pd/feature_importance_pd.csv</code> muestran que las variables con mayor importancia para el MLP son:</p>
 <p><strong>Tabla 5.</strong> <em>Top 10 de variables según la caída media del ROC-AUC del MLP en el conjunto de prueba.</em></p>
 <table>
@@ -760,9 +761,9 @@
 <em>Fuente:</em> Elaboración propia mediante <code>scripts/make_figures.py</code> a partir de <code>reports/tables/pd/feature_importance_pd.csv</code>.</p>
 <p><strong>Contraste de los resultados con las hipótesis de la Sección 3.3 (a partir de la Figura 1, la Tabla 5 y la Figura 6):</strong></p>
 <p><strong>Contrastación y Veredicto Final de las Hipótesis de Riesgo:</strong></p>
-<p><em>🔄 </em><em>Hipótesis 1 — Premisa de Dominancia Directa Refutada Parcialmente / Asociación con la Tasa de Interés (Panel A de la Figura 1 y Tabla 5):</em><em> La creencia inicial de que las variables nominales (<code>home_ownership</code>, <code>verification_status</code> y <code>purpose</code>), expandidas mediante One-Hot Encoding en columnas dummy, dominarían directamente el puntaje de la red neuronal no encuentra respaldo en los resultados actuales de importancia por permutación (PFI). En la tabla PFI, <code>int_rate</code> ocupa el </em><em>primer puesto</em><em>, con una caída media de AUC de (\Delta \text{AUC} = 0.03906 \pm 0.00237). En contraste, <code>home_ownership_MORTGAGE</code> ocupa el puesto 11, con (\Delta \text{AUC} = 0.00250 \pm 0.00007), mientras que <code>home_ownership_RENT</code> ocupa el puesto 15, con (\Delta \text{AUC} = 0.00174 \pm 0.00008). Esto respalda la mayor importancia predictiva individual de la tasa de interés frente a esas dos categorías de vivienda, aunque no permite concluir que todas las variables nominales tengan poca importancia conjunta. En el </em><em>Panel A de la Figura 1</em><em>, la tasa de interés media es del 13,5 % para <code>MORTGAGE</code>, 13,9 % para <code>OWN</code>, 14,1 % para <code>RENT</code> y 13,5 % para <code>OTHER</code>; el ANOVA de una vía detecta diferencias estadísticamente significativas entre las medias de la tasa de interés según la tenencia de vivienda ((F = 317.3), (p &lt; 0.001)). Además, las tasas de incumplimiento observadas son del 18,7 % para <code>MORTGAGE</code>, 21,5 % para <code>OWN</code>, 22,3 % para <code>RENT</code> y 20,3 % para <code>OTHER</code>. Por tanto, los resultados descriptivos respaldan una asociación entre la tenencia de vivienda, la tasa de interés y el incumplimiento. No obstante, estos resultados no demuestran que la tasa de interés sea un mecanismo causal de canalización del riesgo, ni que las diferencias de incumplimiento entre categorías de vivienda sean estadísticamente significativas.</em></p>
-<p><em>✅ </em><em>Hipótesis 2 — Respaldada por los Patrones Descriptivos y la Asociación Estadística (Panel B de la Figura 1 y Tabla 5):</em><em> Los resultados respaldan la relación positiva entre endeudamiento e incumplimiento. En el </em><em>Panel B de la Figura 1</em><em>, la tasa de incumplimiento aumenta monótonamente a través de los cuartiles de <code>dti</code>: para los solicitantes con utilización rotativa inferior al 75 %, pasa del 14,2 % en Q1 al 25,5 % en Q4; para quienes presentan una utilización igual o superior al 75 %, pasa del 20,3 % al 29,6 %. Además, la correlación de Spearman entre <code>dti</code> y el incumplimiento es positiva y estadísticamente significativa ((\rho = 0.109), (p &lt; 0.001)), aunque de magnitud pequeña. En el modelo neuronal (</em><em>Tabla 5</em><em>), <code>dti</code> ocupa el </em><em>tercer puesto</em><em> de importancia por permutación, con (\Delta \text{AUC} = 0.01355 \pm 0.00045), mientras que <code>revol_util</code> ocupa el </em><em>cuarto puesto</em><em>, con (\Delta \text{AUC} = 0.01095 \pm 0.00056). En conjunto, la tendencia observada, la asociación estadística y la importancia predictiva de ambas variables respaldan la hipótesis. Sin embargo, las diferencias entre los grupos de utilización rotativa se presentan como evidencia descriptiva, pues la figura no incluye una prueba estadística específica para compararlos dentro de cada cuartil de <code>dti</code>.</em></p>
-<p><em>✅ </em><em>Hipótesis 3 — Respaldada por la Tendencia Descriptiva y la Asociación Inversa (Panel C de la Figura 1 y Tabla 5):</em><em> Los resultados respaldan la hipótesis de que un mayor ingreso anual está asociado con una menor frecuencia de incumplimiento. Como muestra el </em><em>Panel C de la Figura 1</em><em>, la tasa observada desciende de forma monótona desde el 24,8 % en Q1 hasta el 15,7 % en Q4; los cuartiles intermedios registran tasas del 22,1 % y 18,9 %, respectivamente. La correlación de Spearman entre <code>annual_inc</code> y el incumplimiento es negativa y estadísticamente significativa ((\rho = -0.088), (p &lt; 0.001)), aunque de magnitud pequeña. En concordancia, el análisis PFI (</em><em>Tabla 5</em><em> y </em><em>Figura 6</em><em>) posiciona a <code>annual_inc</code> como la </em><em>segunda variable con mayor importancia predictiva individual</em><em> en la red neuronal, con (\Delta \text{AUC} = 0.02128 \pm 0.00158). Por tanto, la evidencia descriptiva, la asociación inversa y la importancia predictiva respaldan la hipótesis. La conclusión se refiere a una asociación observada y no implica que aumentar el ingreso, por sí solo, cause una reducción del incumplimiento.</em></p>
+<p><em>🔄 <strong>Hipótesis 1 — Premisa de Dominancia Directa Refutada Parcialmente / Asociación con la Tasa de Interés (Panel A de la Figura 1 y Tabla 5):</strong> La creencia inicial de que las variables nominales (<code>home_ownership</code>, <code>verification_status</code> y <code>purpose</code>), expandidas mediante One-Hot Encoding en columnas dummy, dominarían directamente el puntaje de la red neuronal no encuentra respaldo en los resultados actuales de importancia por permutación (PFI). En la tabla PFI, <code>int_rate</code> ocupa el <strong>primer puesto</strong>, con una caída media de AUC de (\Delta \text{AUC} = 0.03906 \pm 0.00237). En contraste, <code>home_ownership_MORTGAGE</code> ocupa el puesto 11, con (\Delta \text{AUC} = 0.00250 \pm 0.00007), mientras que <code>home_ownership_RENT</code> ocupa el puesto 15, con (\Delta \text{AUC} = 0.00174 \pm 0.00008). Esto respalda la mayor importancia predictiva individual de la tasa de interés frente a esas dos categorías de vivienda, aunque no permite concluir que todas las variables nominales tengan poca importancia conjunta. En el <strong>Panel A de la Figura 1</strong>, la tasa de interés media es del 13,5 % para <code>MORTGAGE</code>, 13,9 % para <code>OWN</code>, 14,1 % para <code>RENT</code> y 13,5 % para <code>OTHER</code>; el ANOVA de una vía detecta diferencias estadísticamente significativas entre las medias de la tasa de interés según la tenencia de vivienda ((F = 317.3), (p &lt; 0.001)). Además, las tasas de incumplimiento observadas son del 18,7 % para <code>MORTGAGE</code>, 21,5 % para <code>OWN</code>, 22,3 % para <code>RENT</code> y 20,3 % para <code>OTHER</code>. Por tanto, los resultados descriptivos respaldan una asociación entre la tenencia de vivienda, la tasa de interés y el incumplimiento. No obstante, estos resultados no demuestran que la tasa de interés sea un mecanismo causal de canalización del riesgo, ni que las diferencias de incumplimiento entre categorías de vivienda sean estadísticamente significativas.</em></p>
+<p><em>✅ <strong>Hipótesis 2 — Respaldada por los Patrones Descriptivos y la Asociación Estadística (Panel B de la Figura 1 y Tabla 5):</strong> Los resultados respaldan la relación positiva entre endeudamiento e incumplimiento. En el <strong>Panel B de la Figura 1</strong>, la tasa de incumplimiento aumenta monótonamente a través de los cuartiles de <code>dti</code>: para los solicitantes con utilización rotativa inferior al 75 %, pasa del 14,2 % en Q1 al 25,5 % en Q4; para quienes presentan una utilización igual o superior al 75 %, pasa del 20,3 % al 29,6 %. Además, la correlación de Spearman entre <code>dti</code> y el incumplimiento es positiva y estadísticamente significativa ((\rho = 0.109), (p &lt; 0.001)), aunque de magnitud pequeña. En el modelo neuronal (<strong>Tabla 5</strong>), <code>dti</code> ocupa el <strong>tercer puesto</strong> de importancia por permutación, con (\Delta \text{AUC} = 0.01355 \pm 0.00045), mientras que <code>revol_util</code> ocupa el <strong>cuarto puesto</strong>, con (\Delta \text{AUC} = 0.01095 \pm 0.00056). En conjunto, la tendencia observada, la asociación estadística y la importancia predictiva de ambas variables respaldan la hipótesis. Sin embargo, las diferencias entre los grupos de utilización rotativa se presentan como evidencia descriptiva, pues la figura no incluye una prueba estadística específica para compararlos dentro de cada cuartil de <code>dti</code>.</em></p>
+<p><em>✅ <strong>Hipótesis 3 — Respaldada por la Tendencia Descriptiva y la Asociación Inversa (Panel C de la Figura 1 y Tabla 5):</strong> Los resultados respaldan la hipótesis de que un mayor ingreso anual está asociado con una menor frecuencia de incumplimiento. Como muestra el <strong>Panel C de la Figura 1</strong>, la tasa observada desciende de forma monótona desde el 24,8 % en Q1 hasta el 15,7 % en Q4; los cuartiles intermedios registran tasas del 22,1 % y 18,9 %, respectivamente. La correlación de Spearman entre <code>annual_inc</code> y el incumplimiento es negativa y estadísticamente significativa ((\rho = -0.088), (p &lt; 0.001)), aunque de magnitud pequeña. En concordancia, el análisis PFI (<strong>Tabla 5</strong> y <strong>Figura 6</strong>) posiciona a <code>annual_inc</code> como la <strong>segunda variable con mayor importancia predictiva individual</strong> en la red neuronal, con (\Delta \text{AUC} = 0.02128 \pm 0.00158). Por tanto, la evidencia descriptiva, la asociación inversa y la importancia predictiva respaldan la hipótesis. La conclusión se refiere a una asociación observada y no implica que aumentar el ingreso, por sí solo, cause una reducción del incumplimiento.</em></p>
 <p>En conjunto, el análisis PFI del MLP identifica <code>int_rate</code>, <code>annual_inc</code>, <code>dti</code> y <code>revol_util</code> como las cuatro variables con mayor importancia predictiva individual, con caídas medias de AUC de (0.03906), (0.02128), (0.01355) y (0.01095), respectivamente. Estos resultados respaldan la relevancia de las condiciones del préstamo, los ingresos y el endeudamiento para la clasificación del riesgo crediticio. No obstante, la importancia predictiva de una variable no demuestra causalidad. Por ello, los veredictos anteriores integran la PFI con las tasas observadas y las asociaciones estadísticas calculadas sobre el conjunto de entrenamiento.</p>
 <hr />
 <hr />
@@ -779,6 +780,8 @@
 <h2 id="referencias-bibliograficas-formato-apa-7a-edicion">Referencias Bibliográficas (Formato APA 7.ª Edición)</h2>
 <ul>
 <li>Basel Committee on Banking Supervision [BCBS]. (2017). <em>Basel III: Finalising post-crisis reforms</em>. Bank for International Settlements. https://www.bis.org/bcbs/publ/d424.htm</li>
+<li>Breiman, L. (2001). Random forests. <em>Machine Learning</em>, <em>45</em>(1), 5–32. https://doi.org/10.1023/A:1010933404324</li>
+<li>Fisher, A., Rudin, C., &amp; Dominici, F. (2019). All models are wrong, but many are useful: Learning a variable's importance by studying an entire class of prediction models simultaneously. <em>Journal of Machine Learning Research</em>, <em>20</em>(177), 1–81. https://www.jmlr.org/papers/v20/18-760.html</li>
 <li>Hand, D. J., &amp; Henley, W. E. (1997). Statistical classification methods in consumer credit scoring: A review. <em>Journal of the Royal Statistical Society: Series A (Statistics in Society)</em>, <em>160</em>(3), 523–541. https://doi.org/10.1111/j.1467-985X.1997.00078.x</li>
 <li>International Accounting Standards Board [IASB]. (2014). <em>IFRS 9 Financial Instruments</em>. IFRS Foundation.</li>
 <li>Lessmann, S., Baesens, B., Seow, H.-V., &amp; Thomas, L. C. (2015). Benchmarking state-of-the-art classification algorithms for credit scoring: An update of research. <em>European Journal of Operational Research</em>, <em>247</em>(1), 124–136. https://doi.org/10.1016/j.ejor.2015.05.030</li>
@@ -1226,21 +1229,23 @@ python scripts/make_figures_lgd.py         # figuras e interpretabilidad
         </section>
         <section id="tab-math" class="tab-panel">
             <h2 id="4f-fundamentacion-matematica">4F. Fundamentación Matemática</h2>
-<h3 id="4f1-funcion-de-perdida-entropia-cruzada-binaria-ponderada-y-estabilidad-numerica">4F.1. Función de Pérdida: Entropía Cruzada Binaria Ponderada y Estabilidad Numérica</h3>
-<p>Sea $\mathcal{D} = \{(\mathbf{x}_i, y_i)\}_{i=1}^N$ el conjunto de entrenamiento, donde $\mathbf{x}_i \in \mathbb{R}^D$ ($D=38$) y $y_i \in \{0, 1\}$. El modelo produce un <em>logit</em> real $z_i = f_{\boldsymbol{\theta}}(\mathbf{x}_i) \in \mathbb{R}$, el cual se proyecta al espacio de probabilidades mediante la función logística sigmoide:</p>
-<p>$$\hat{p}_i = \sigma(z_i) = \frac{1}{1 + e^{-z_i}}$$</p>
-<p>Bajo el principio de Máxima Verosimilitud sobre una distribución de Bernoulli, minimizar el logaritmo negativo de la verosimilitud equivale a minimizar la <strong>Entropía Cruzada Binaria (<em>Binary Cross-Entropy</em>, BCE)</strong>. Para mitigar eventuales desbalances y controlar el costo relativo de la clase minoritaria ($y_i=1$) mediante un peso positivo $w_+ > 0$, la pérdida por observación se define como:</p>
-<p>$$\mathcal{L}_i(z_i, y_i) = -\left[ w_+ y_i \ln \sigma(z_i) + (1 - y_i) \ln (1 - \sigma(z_i)) \right]$$</p>
-<p>Evaluar $\ln \sigma(z_i)$ de forma ingenua provoca desbordamiento numérico (<em>underflow/overflow</em>) cuando $|z_i| \gg 0$. En <code>PyTorch</code> (<code>BCEWithLogitsLoss</code>), sustituimos analíticamente $\sigma(z_i)$ aplicando la identidad <strong>Log-Sum-Exp</strong>:</p>
-<p>$$\mathcal{L}_i(z_i, y_i) = (1 - y_i) z_i + \left(1 + (w_+ - 1)y_i\right) \left[ \max(0, -z_i) + \ln\left(1 + e^{-|z_i|}\right) \right]$$</p>
-<p>Esta formulación es numéricamente estable para cualquier $z_i \in (-\infty, +\infty)$. Su gradiente respecto al <em>logit</em> $z_i$ adopta la forma limpia:</p>
-<p>$$\frac{\partial \mathcal{L}_i}{\partial z_i} = \sigma(z_i)\left(1 + (w_+ - 1)y_i\right) - w_+ y_i$$</p>
-<p>Cuando $w_+ = 1$, se recupera la expresión clásica $\frac{\partial \mathcal{L}_i}{\partial z_i} = \hat{p}_i - y_i$, mostrando que el impulso de retropropagación es directamente proporcional al error de calibración residual.</p>
-<h3 id="4f2-modelo-de-referencia-regresion-logistica-con-regularizacion-math_block_34">4F.2. Modelo de Referencia: Regresión Logística con Regularización $L_2$</h3>
+<h3 id="4f1-funcion-de-perdida-entropia-cruzada-binaria-desde-maxima-verosimilitud">4F.1. Función de pérdida: entropía cruzada binaria desde máxima verosimilitud</h3>
+<p>Sea $\mathcal{D}=\{(\mathbf{x}_i,y_i)\}_{i=1}^N$ con $\mathbf{x}_i\in\mathbb{R}^D$ ($D=38$) y $y_i\in\{0,1\}$. Se modela $Y_i\mid\mathbf{x}_i\sim\text{Bernoulli}(p_i)$ con $p_i=\sigma(z_i)$, donde $z_i=f_{\boldsymbol\theta}(\mathbf{x}_i)$ es el <em>logit</em> y $\sigma(z)=1/(1+e^{-z})$. La masa de probabilidad es
+$$P(y_i\mid\mathbf{x}_i)=p_i^{\,y_i}(1-p_i)^{1-y_i}.$$
+Con observaciones independientes, la verosimilitud es $\mathcal{L}(\boldsymbol\theta)=\prod_{i=1}^N p_i^{y_i}(1-p_i)^{1-y_i}$ y la log-verosimilitud
+$$\ell(\boldsymbol\theta)=\sum_{i=1}^N\big[y_i\ln p_i+(1-y_i)\ln(1-p_i)\big].$$
+Maximizar $\ell$ equivale a minimizar la entropía cruzada binaria (BCE):
+$$\mathcal{L}_{\text{BCE}}(\boldsymbol\theta)=-\frac{1}{N}\sum_{i=1}^N\big[y_i\ln\sigma(z_i)+(1-y_i)\ln(1-\sigma(z_i))\big].$$
+<strong>Gradiente.</strong> Como $\sigma'(z)=\sigma(z)(1-\sigma(z))$, se tiene $\tfrac{d}{dz}\ln\sigma(z)=1-\sigma(z)$ y $\tfrac{d}{dz}\ln(1-\sigma(z))=-\sigma(z)$. Por tanto, para una observación,
+$$\frac{\partial \mathcal{L}_i}{\partial z_i}=-y_i(1-p_i)+(1-y_i)p_i=p_i-y_i.$$
+<strong>Estabilidad numérica.</strong> Usando $-\ln\sigma(z)=\ln(1+e^{-z})$ y $-\ln(1-\sigma(z))=\ln(1+e^{z})$, la pérdida se escribe $\mathcal{L}_i=\max(z_i,0)-y_iz_i+\ln\!\big(1+e^{-|z_i|}\big)$, que es lo que calcula <code>BCEWithLogitsLoss</code> de PyTorch.</p>
+<p>El MLP se entrena con esta pérdida sin ponderar. La ponderación de clases solo se evaluó en la regresión logística (<code>LR_6</code>, <code>class_weight='balanced'</code>); como no corresponde a la verosimilitud de Bernoulli del modelo, altera las probabilidades estimadas (Brier de 0,2257 frente a 0,1795 sin ponderar, Tabla 2).</p>
+<h3 id="4f2-modelo-de-referencia-regresion-logistica-con-regularizacion-math_block_40">4F.2. Modelo de Referencia: Regresión Logística con Regularización $L_2$</h3>
 <p>El modelo base (<em>baseline</em>) parametriza el <em>logit</em> como una combinación afín de las características estandarizadas:</p>
 <p>$$z_i = \mathbf{w}^\top \mathbf{x}_i + b \implies \ln\left(\frac{\hat{p}_i}{1 - \hat{p}_i}\right) = \sum_{j=1}^{D} w_j x_{ij} + b$$</p>
 <p>Esto implica que la frontera de decisión $\{\mathbf{x} \in \mathbb{R}^D : \hat{p}(\mathbf{x}) = \tau\}$ es estrictamente un hiperplano lineal y que el cambio en el <em>log-odds</em> ante una variación unitaria en $x_j$ es constante ($w_j$), independientemente de los valores que tomen las demás variables. El problema de optimización incorpora penalización de Tikhonov ($L_2$):</p>
 <p>$$\min_{\mathbf{w}, b} \frac{1}{N} \sum_{i=1}^N \mathcal{L}_i(\mathbf{w}^\top \mathbf{x}_i + b, y_i) + \frac{\lambda}{2} \|\mathbf{w}\|_2^2$$</p>
+<p>En la implementación (<code>sklearn.linear_model.LogisticRegression</code>) el objetivo es $\min_{\mathbf{w},b}\ \tfrac12\|\mathbf{w}\|_2^2 + C\sum_i\mathcal{L}_i$, equivalente a la forma anterior con $\lambda = 1/(CN)$.</p>
 <h3 id="4f3-arquitectura-de-red-neuronal-multicapa-mlp">4F.3. Arquitectura de Red Neuronal Multicapa (MLP)</h3>
 <p>Para superar la rigidez aditiva de la Regresión Logística, implementamos en <code>src/creditrisk/models/mlp.py</code> un Perceptrón Multicapa de $L$ capas ocultas. Para una entrada $\mathbf{h}^{(0)} = \mathbf{x}$, cada bloque oculto $l \in \{1, \dots, L\}$ ejecuta la composición de cuatro operadores:</p>
 <p>$$\begin{aligned}
@@ -1254,7 +1259,7 @@ python scripts/make_figures_lgd.py         # figuras e interpretabilidad
 <p><strong>Justificación de los componentes arquitectónicos:</strong>
 1. <strong>Batch Normalization (Ioffe &amp; Szegedy, 2015):</strong> Estabiliza la distribución de las activaciones intermedias frente a variables financieras con asimetría residual, permitiendo tasas de aprendizaje mayores y actuando como regularizador implícito.
 2. <strong>Activación No Lineal $\phi(\cdot)$ (ReLU / GELU):</strong> Introduce particiones poliedrales (con $\text{ReLU}(u) = \max(0, u)$) o curvatura suave ($\text{GELU}(u) = u \Phi(u)$), habilitando al modelo para aprender interacciones multiplicativas implícitas como $\text{DTI} \times \text{Tasa de Interés}$ sin especificarlas manualmente.
-3. <strong>Dropout (Srivastava et al., 2014) y Decaimiento de Pesos ($L_2$ en AdamW):</strong> Previenen la co-adaptación de neuronas ocultas sobre ruido idiosincrático del conjunto de entrenamiento.</p>
+3. <strong>Dropout (Srivastava et al., 2014) y decaimiento de pesos desacoplado (AdamW):</strong> Previenen la co-adaptación de neuronas ocultas sobre ruido idiosincrático del conjunto de entrenamiento.</p>
 <h3 id="4f4-metricas-de-evaluacion-en-riesgo-crediticio">4F.4. Métricas de Evaluación en Riesgo Crediticio</h3>
 <ol>
 <li><strong>Área Bajo la Curva ROC (ROC-AUC) e Índice de Gini:</strong><br />
@@ -1269,6 +1274,7 @@ python scripts/make_figures_lgd.py         # figuras e interpretabilidad
 <li><strong>Brier Score (Métrica de Calibración):</strong><br />
    Mide el error cuadrático medio entre las probabilidades pronosticadas y los eventos binarios realizados:
    $$\text{BS} = \frac{1}{N} \sum_{i=1}^N (\hat{p}_i - y_i)^2$$</li>
+<li><strong>Curva de calibración:</strong> se divide $[0,1]$ en $K=10$ intervalos de igual amplitud $B_k$. Para cada $B_k$ con $n_k>0$ se calcula la probabilidad media predicha $\bar p_k=\frac{1}{n_k}\sum_{i\in B_k}\hat p_i$ y la frecuencia observada $\bar y_k=\frac{1}{n_k}\sum_{i\in B_k}y_i$. La curva une los puntos $(\bar p_k,\bar y_k)$; un modelo perfectamente calibrado cae sobre la diagonal.</li>
 </ol>
 <h3 id="4f5-derivacion-matematica-del-scorecard-bancario-pdo-scaling">4F.5. Derivación Matemática del <em>Scorecard</em> Bancario (<em>PDO Scaling</em>)</h3>
 <p>En la industria financiera, las probabilidades $\hat{p}_i$ se transforman en un puntaje aditivo mediante una función afín del logaritmo de las probabilidades a favor de pago ($\text{Odds}_{\text{bueno}} = \frac{1 - \hat{p}_i}{\hat{p}_i}$) (Siddiqi, 2017):</p>
@@ -1303,6 +1309,25 @@ python scripts/make_figures_lgd.py         # figuras e interpretabilidad
 <p>El sesgo de la capa de salida se inicializa en $\text{logit}(\bar{y}_{\text{train}})$, de modo que la red parta prediciendo la media del entrenamiento. Sin esta inicialización, en la prueba en modo demo la red predecía en promedio 0.70 (frente a 0.92 observado) y subajustaba; se reproduce con <code>python scripts/run_lgd.py --demo --set mlp.init_output_bias=false</code>.</p>
 <h3 id="4f9-perdida-esperada-como-valor-esperado">4F.9. Pérdida Esperada como Valor Esperado</h3>
 <p>La pérdida esperada de un crédito se obtiene combinando los tres componentes. Se supone que, dado $\mathbf{x}$, la severidad (LGD, EAD) es independiente de que el incumplimiento ocurra, de modo que $\mathbb{E}[\text{pérdida}\mid\mathbf{x}] \approx \text{PD}(\mathbf{x})\cdot\mathbb{E}[\text{LGD}\mid\mathbf{x}]\cdot\mathbb{E}[\text{EAD}\mid\mathbf{x}]$.</p>
+<h3 id="4f10-neurona-artificial-activaciones-y-retropropagacion">4F.10. Neurona artificial, activaciones y retropropagación</h3>
+<p>Una <strong>neurona artificial</strong> calcula $a=\phi(\mathbf{w}^\top\mathbf{x}+b)$, con pesos $\mathbf{w}$, sesgo $b$ y activación $\phi$. Un <strong>perceptrón multicapa</strong> compone capas: $\mathbf{u}^{(l)}=\mathbf{W}^{(l)}\mathbf{h}^{(l-1)}+\mathbf{b}^{(l)}$, $\mathbf{h}^{(l)}=\phi(\mathbf{u}^{(l)})$ para $l=1,\dots,L$, con $\mathbf{h}^{(0)}=\mathbf{x}$ y salida $z=\mathbf{w}_{\text{out}}^\top\mathbf{h}^{(L)}+b_{\text{out}}$.</p>
+<p>Activaciones usadas:
+* <strong>ReLU:</strong> $\phi(u)=\max(0,u)$, $\phi'(u)=\mathbb{1}[u>0]$.
+* <strong>GELU:</strong> $\phi(u)=u\,\Phi(u)$, con $\Phi$ la FDA normal estándar; $\phi'(u)=\Phi(u)+u\,\varphi(u)$, con $\varphi$ su densidad.
+* <strong>Tanh:</strong> $\phi(u)=\dfrac{e^u-e^{-u}}{e^u+e^{-u}}$, $\phi'(u)=1-\phi(u)^2$.
+* <strong>Sigmoide</strong> (salida): $\sigma(z)=1/(1+e^{-z})$.</p>
+<p><strong>Retropropagación</strong> (sin <em>dropout</em> ni <em>batch normalization</em>, para una observación). Con $\delta^{(l)}=\partial\mathcal{L}/\partial\mathbf{u}^{(l)}$:
+$$\frac{\partial\mathcal{L}}{\partial z}=p-y,\qquad \boldsymbol\delta^{(L)}=(p-y)\,\mathbf{w}_{\text{out}}\odot\phi'(\mathbf{u}^{(L)}),$$
+$$\boldsymbol\delta^{(l)}=\big(\mathbf{W}^{(l+1)\top}\boldsymbol\delta^{(l+1)}\big)\odot\phi'(\mathbf{u}^{(l)}),\qquad \frac{\partial\mathcal{L}}{\partial\mathbf{W}^{(l)}}=\boldsymbol\delta^{(l)}\mathbf{h}^{(l-1)\top},\quad \frac{\partial\mathcal{L}}{\partial\mathbf{b}^{(l)}}=\boldsymbol\delta^{(l)},$$
+y para la capa de salida $\partial\mathcal{L}/\partial\mathbf{w}_{\text{out}}=(p-y)\mathbf{h}^{(L)}$, $\partial\mathcal{L}/\partial b_{\text{out}}=p-y$. Con <em>dropout</em>, el gradiente se multiplica por la misma máscara $\mathbf{m}/(1-p)$ usada en el paso hacia adelante; la <em>batch normalization</em> añade los términos de la normalización por lote (Ioffe &amp; Szegedy, 2015).</p>
+<h3 id="4f11-optimizador-y-regularizacion">4F.11. Optimizador y regularización</h3>
+<p><strong>AdamW</strong> (Loshchilov &amp; Hutter, 2019), basado en Adam (Kingma &amp; Ba, 2015). Con gradiente $g_t=\nabla_{\boldsymbol\theta}\mathcal{L}_t$ del minilote $t$, tasa $\eta$, $\beta_1=0{,}9$, $\beta_2=0{,}999$, $\epsilon=10^{-8}$ y decaimiento $\lambda$:
+$$m_t=\beta_1m_{t-1}+(1-\beta_1)g_t,\qquad v_t=\beta_2v_{t-1}+(1-\beta_2)g_t^2,$$
+$$\hat m_t=\frac{m_t}{1-\beta_1^t},\quad \hat v_t=\frac{v_t}{1-\beta_2^t},\qquad \boldsymbol\theta_t=\boldsymbol\theta_{t-1}-\eta\left(\frac{\hat m_t}{\sqrt{\hat v_t}+\epsilon}+\lambda\,\boldsymbol\theta_{t-1}\right).$$
+El decaimiento $\lambda\boldsymbol\theta_{t-1}$ se aplica <strong>fuera</strong> del cálculo adaptativo; por eso no equivale a una penalización $L_2$ sumada a la pérdida, que en Adam quedaría dividida por $\sqrt{\hat v_t}$. Aquí $\eta=10^{-3}$ y $\lambda=10^{-4}$ (<code>configs/pd.yaml</code>).</p>
+<p><strong>Dropout:</strong> durante el entrenamiento $\mathbf{h}=\frac{1}{1-p}\,\mathbf{m}\odot\mathbf{a}$, con $m_k\sim\text{Bernoulli}(1-p)$ y $p=0{,}15$; en inferencia no se aplica (Srivastava et al., 2014).</p>
+<p><strong>Batch normalization:</strong> normaliza cada unidad con la media y varianza del minilote y luego aplica $\boldsymbol\gamma,\boldsymbol\beta$ (fórmula en 4F.3); en inferencia usa las medias y varianzas móviles acumuladas durante el entrenamiento.</p>
+<p><strong>Parada temprana:</strong> sea $\text{AUC}_{\text{val}}(t)$ el AUC de validación tras la época $t$. Se conservan los pesos de $t=\arg\max_t\text{AUC}_{\text{val}}(t)$ y se detiene el entrenamiento si no hay mejora mayor que $10^{-5}$ durante 4 épocas consecutivas (paciencia).</p>
 <hr />
 <hr />
 <h2 id="referencias-bibliograficas-formato-apa-7a-edicion">Referencias Bibliográficas (Formato APA 7.ª Edición)</h2>
@@ -1312,6 +1337,8 @@ python scripts/make_figures_lgd.py         # figuras e interpretabilidad
 <li>Papke, L. E., &amp; Wooldridge, J. M. (1996). Econometric methods for fractional response variables with an application to 401(k) plan participation rates. <em>Journal of Applied Econometrics</em>, <em>11</em>(6), 619–632.</li>
 <li>Siddiqi, N. (2017). <em>Intelligent credit scoring: Building and implementing better credit risk scorecards</em> (2nd ed.). John Wiley &amp; Sons. https://doi.org/10.1002/9781119282396</li>
 <li>Srivastava, N., Hinton, G., Krizhevsky, A., Sutskever, I., &amp; Salakhutdinov, R. (2014). Dropout: A simple way to prevent neural networks from overfitting. <em>Journal of Machine Learning Research</em>, <em>15</em>(56), 1929–1958.</li>
+<li>Kingma, D. P., &amp; Ba, J. (2015). Adam: A method for stochastic optimization. <em>3rd International Conference on Learning Representations (ICLR 2015)</em>. https://arxiv.org/abs/1412.6980</li>
+<li>Loshchilov, I., &amp; Hutter, F. (2019). Decoupled weight decay regularization. <em>7th International Conference on Learning Representations (ICLR 2019)</em>. https://arxiv.org/abs/1711.05101</li>
 </ul>
         </section>
         <section id="tab-ia" class="tab-panel">

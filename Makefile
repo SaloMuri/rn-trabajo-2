@@ -11,9 +11,10 @@ search-lgd: ; python scripts/run_search_lgd.py
 search:  ; python scripts/run_search.py
 seeds:   ; python scripts/run_seeds.py
 seeds-lgd: ; python scripts/run_seeds_lgd.py
+censura: ; python scripts/censura_etiquetas.py
 el: ; python scripts/run_expected_loss.py
 figures: ; python scripts/make_figures.py
 figures-lgd: ; python scripts/make_figures_lgd.py
-demo:    ; python scripts/run_pd.py   # TODO: con configs/demo.yaml
+demo:    ; python scripts/run_pd.py --config configs/demo.yaml
 app:     ; streamlit run app/app.py
 test:    ; pytest -q

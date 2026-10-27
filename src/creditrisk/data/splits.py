@@ -12,33 +12,29 @@ def temporal_train_val_test_split(
     val_end: str = "2014-12-01",
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    Realiza una partición estrictamente temporal (Out-of-Time) según la fecha de originación.
-    - Train: issue_d_dt <= train_end
-    - Val  : train_end < issue_d_dt <= val_end
-    - Test : issue_d_dt > val_end
+    Partición estrictamente temporal (Out-of-Time) según la fecha de originación.
+    - Train: date_col <= train_end
+    - Val  : train_end < date_col <= val_end
+    - Test : date_col > val_end
+    Si alguna partición queda vacía lanza ValueError (no cambia de método en silencio).
     """
+    if date_col not in df.columns:
+        raise ValueError(f"No existe la columna de fecha '{date_col}'.")
+
     df_sorted = df.sort_values(by=date_col).reset_index(drop=True)
     dt_series = pd.to_datetime(df_sorted[date_col])
+    t_train, t_val = pd.to_datetime(train_end), pd.to_datetime(val_end)
+    if t_train >= t_val:
+        raise ValueError("train_end debe ser anterior a val_end.")
 
-    t_train = pd.to_datetime(train_end)
-    t_val = pd.to_datetime(val_end)
+    train_df = df_sorted[dt_series <= t_train].copy()
+    val_df = df_sorted[(dt_series > t_train) & (dt_series <= t_val)].copy()
+    test_df = df_sorted[dt_series > t_val].copy()
 
-    train_mask = dt_series <= t_train
-    val_mask = (dt_series > t_train) & (dt_series <= t_val)
-    test_mask = dt_series > t_val
-
-    train_df = df_sorted[train_mask].copy()
-    val_df = df_sorted[val_mask].copy()
-    test_df = df_sorted[test_mask].copy()
-
-    # Seguro automático: si el dataset tiene otro rango de fechas y algún split queda vacío,
-    # particionamos temporalmente por cuantiles (70% train, 15% val, 15% test).
-    if len(train_df) == 0 or len(val_df) == 0 or len(test_df) == 0:
-        n = len(df_sorted)
-        i_train = int(n * 0.70)
-        i_val = int(n * 0.85)
-        train_df = df_sorted.iloc[:i_train].copy()
-        val_df = df_sorted.iloc[i_train:i_val].copy()
-        test_df = df_sorted.iloc[i_val:].copy()
-
+    for name, part in (("train", train_df), ("val", val_df), ("test", test_df)):
+        if len(part) == 0:
+            raise ValueError(
+                f"La partición '{name}' quedó vacía con train_end={train_end} y val_end={val_end}. "
+                "Revisa las fechas en configs/base.yaml."
+            )
     return train_df, val_df, test_df

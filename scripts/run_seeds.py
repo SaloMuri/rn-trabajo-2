@@ -19,22 +19,17 @@ from creditrisk.metrics import evaluate_pd_metrics
 from creditrisk.models.baseline_pd import LogisticPDModel
 from creditrisk.models.mlp import load_mlp_checkpoint, predict_proba_mlp, train_pd_mlp
 from creditrisk.seeding import set_all_seeds
-
+from creditrisk.config import load_config
 
 def load_split_df(processed_dir: str, split_name: str, fmt: str) -> pd.DataFrame:
     path = os.path.join(processed_dir, f"{split_name}.{fmt}")
     return pd.read_parquet(path) if fmt == "parquet" else pd.read_csv(path, low_memory=False)
 
 
-def main(
-    base_cfg_path: str = "configs/base.yaml",
-    pd_cfg_path: str = "configs/pd.yaml",
-    n_seeds: int = 30,
-) -> None:
-    with open(base_cfg_path, "r", encoding="utf-8") as f:
-        base_cfg = yaml.safe_load(f)
-    with open(pd_cfg_path, "r", encoding="utf-8") as f:
-        pd_cfg = yaml.safe_load(f)
+def main(base_cfg_path="configs/base.yaml", pd_cfg_path="configs/pd.yaml",
+         n_seeds=30, seed_start=100, overrides=None) -> None:
+    cfg = load_config([base_cfg_path, pd_cfg_path], overrides)
+    base_cfg = pd_cfg = cfg   # config fusionada (base + pd + overrides)
 
     proc_dir = base_cfg["paths"]["processed_pd_dir"]
     fmt = base_cfg["paths"].get("output_format", "csv")
@@ -64,7 +59,7 @@ def main(
 
     print(f"[Seeds] Ejecutando evaluación multi-semilla con {n_seeds} semillas independientes...")
     for idx in range(n_seeds):
-        current_seed = 100 + idx
+        current_seed = seed_start + idx
         set_all_seeds(current_seed)
         t0 = time.time()
         model, _ = train_pd_mlp(X_train, y_train, X_val, y_val, mlp_cfg, verbose=False)
@@ -175,4 +170,11 @@ def main(
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    p = argparse.ArgumentParser(description="MLP final con varias semillas.")
+    p.add_argument("--config", default="configs/pd.yaml")
+    p.add_argument("--n-seeds", type=int, default=30)
+    p.add_argument("--seed-start", type=int, default=100)
+    p.add_argument("--set", nargs="*", default=[], metavar="clave=valor")
+    a = p.parse_args()
+    main("configs/base.yaml", a.config, a.n_seeds, a.seed_start, a.set)
