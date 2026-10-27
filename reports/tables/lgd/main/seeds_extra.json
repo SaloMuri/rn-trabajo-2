@@ -1,0 +1,10 @@
+{
+  "n_semillas": 30,
+  "tiempo_total_s": 455.2,
+  "tiempo_medio_por_entrenamiento_s": 7.54,
+  "C_gana_a_lineal_test_rmse": "29/30",
+  "C_gana_a_lineal_test_mae": "29/30",
+  "C_gana_a_B_test_rmse": "13/30",
+  "diferencia_media_C_menos_B_test_rmse": 0.0008649764130098122,
+  "desv_est_de_la_diferencia_C_menos_B": 0.0034067466616779763
+}

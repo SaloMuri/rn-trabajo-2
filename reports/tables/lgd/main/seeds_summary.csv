@@ -1,0 +1,17 @@
+Modelo,Métrica,Media,Desv_est,Mejor,Peor,n,Parámetros
+Constante (media train),Val_MAE,0.07707,0.0,0.07707,0.07707,1,1
+Constante (media train),Val_RMSE,0.08404,0.0,0.08404,0.08404,1,1
+Constante (media train),Test_MAE,0.08068,0.0,0.08068,0.08068,1,1
+Constante (media train),Test_RMSE,0.09219,0.0,0.09219,0.09219,1,1
+Regresión lineal (referencia),Val_MAE,0.07522,0.0,0.07522,0.07522,1,39
+Regresión lineal (referencia),Val_RMSE,0.0831,0.0,0.0831,0.0831,1,39
+Regresión lineal (referencia),Test_MAE,0.07799,0.0,0.07799,0.07799,1,39
+Regresión lineal (referencia),Test_RMSE,0.09241,0.0,0.09241,0.09241,1,39
+MLP sigmoide+BCE (C),Val_MAE,0.07239,0.00161,0.06848,0.07518,30,4609
+MLP sigmoide+BCE (C),Val_RMSE,0.08085,0.00106,0.0788,0.08292,30,4609
+MLP sigmoide+BCE (C),Test_MAE,0.07286,0.00301,0.06576,0.07813,30,4609
+MLP sigmoide+BCE (C),Test_RMSE,0.08849,0.002,0.0842,0.09276,30,4609
+"MLP sigmoide+MSE (B, contraste)",Val_MAE,0.07264,0.00295,0.06682,0.07802,30,4609
+"MLP sigmoide+MSE (B, contraste)",Val_RMSE,0.08115,0.002,0.0779,0.08513,30,4609
+"MLP sigmoide+MSE (B, contraste)",Test_MAE,0.07292,0.00566,0.06144,0.08282,30,4609
+"MLP sigmoide+MSE (B, contraste)",Test_RMSE,0.08763,0.00392,0.08081,0.09519,30,4609
