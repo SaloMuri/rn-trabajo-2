@@ -1,0 +1,15 @@
+# Mejor configuración de la búsqueda (menor RMSE de validación). Generado por
+# scripts/run_search_lgd.py; úsese con: python scripts/run_lgd.py --best
+baseline:
+  alpha: 0.01
+mlp:
+  hidden_dims:
+  - 64
+  - 32
+  activation: selu
+  dropout: 0.1
+  use_batchnorm: false
+  batch_size: 1024
+  optimizer: rmsprop
+  lr: 0.002
+  weight_decay: 0.0025

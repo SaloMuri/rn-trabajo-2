@@ -1,0 +1,33 @@
+{
+  "poblacion": "main",
+  "semilla": 42,
+  "mlp": {
+    "configuraciones": 60,
+    "tiempo_total_s": 463.8,
+    "tiempo_medio_s": 7.73
+  },
+  "ridge": {
+    "configuraciones": 12,
+    "tiempo_total_s": 0.2
+  },
+  "pruebas_manuales_previas_declaradas": 1,
+  "criterio_de_seleccion": "menor RMSE de validación (el test no se usó)",
+  "mejor_mlp": {
+    "hidden_dims": [
+      64,
+      32
+    ],
+    "activation": "selu",
+    "dropout": 0.1,
+    "use_batchnorm": false,
+    "batch_size": 1024,
+    "optimizer": "rmsprop",
+    "lr": 0.002,
+    "weight_decay": 0.0025,
+    "val_rmse": 0.07978554452440612
+  },
+  "mejor_ridge": {
+    "alpha": 0.01,
+    "val_rmse": 0.08309586286781621
+  }
+}
