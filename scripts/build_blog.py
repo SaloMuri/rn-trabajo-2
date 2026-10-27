@@ -4,13 +4,13 @@ con estética ejecutiva financiera, segmentación en 5 pestañas interactivas,
 soporte para ecuaciones LaTeX (MathJax), tablas estilizadas e imágenes Base64.
 Conserva el 100% de la información original de blog/reporte.md.
 """
-
+ 
 import base64
 import re
 from pathlib import Path
 import markdown
-
-
+ 
+ 
 HTML_TEMPLATE = r"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -297,7 +297,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             </div>
         </div>
     </header>
-
+ 
     <div class="tabs-bar">
         <nav class="tabs-nav" role="tablist">
             <button class="tab-btn active" onclick="openTab(event, 'tab-pd')" role="tab">📈 Parte 1: PD y Scorecard</button>
@@ -307,7 +307,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             <button class="tab-btn" onclick="openTab(event, 'tab-audit')" role="tab">🔍 Cacería de Alucinaciones</button>
         </nav>
     </div>
-
+ 
     <main class="container">
         <section id="tab-pd" class="tab-panel active">
             __TAB_PD__
@@ -325,22 +325,22 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             __TAB_AUDIT__
         </section>
     </main>
-
+ 
     <footer>
         Curso: Redes Neuronales y Algoritmos Bioinspirados — Universidad Nacional de Colombia, Sede Medellín (Facultad de Minas) · Semestre 2026-02
     </footer>
-
+ 
     <script>
         function openTab(evt, tabId) {
             var panels = document.querySelectorAll('.tab-panel');
             panels.forEach(function(p) { p.classList.remove('active'); });
-
+ 
             var buttons = document.querySelectorAll('.tab-btn');
             buttons.forEach(function(b) { b.classList.remove('active'); });
-
+ 
             document.getElementById(tabId).classList.add('active');
             evt.currentTarget.classList.add('active');
-
+ 
             if (window.MathJax && window.MathJax.typesetPromise) {
                 window.MathJax.typesetPromise();
             }
@@ -349,102 +349,130 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 </body>
 </html>
 """
-
-
+ 
+ 
 def embed_images_as_base64(md_text: str, blog_dir: Path) -> str:
     """Reemplaza rutas de imágenes Markdown por data URIs en Base64
     para que el HTML sea 100% portable e independiente de carpetas.
     """
     pattern = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
-
+ 
     def replacer(match):
         alt_text = match.group(1)
         img_rel_path = match.group(2).strip()
-
+ 
         if img_rel_path.startswith("http") or img_rel_path.startswith("data:"):
             return match.group(0)
-
+ 
         candidate_paths = [
             (blog_dir / img_rel_path).resolve(),
             (blog_dir.parent / img_rel_path).resolve(),
         ]
-
+ 
         clean_rel = img_rel_path.lstrip("./")
         candidate_paths.append((blog_dir.parent / clean_rel).resolve())
-
+ 
         for p in candidate_paths:
             if p.exists() and p.is_file():
                 b64 = base64.b64encode(p.read_bytes()).decode("utf-8")
                 ext = p.suffix.lower().lstrip(".") or "png"
                 return f"![{alt_text}](data:image/{ext};base64,{b64})"
-
+ 
         print(f"[WARN] No se encontró la imagen: {img_rel_path}")
         return match.group(0)
-
+ 
     return pattern.sub(replacer, md_text)
-
-
+ 
+ 
 def md_to_html_safe_math(md_text: str) -> str:
     """Convierte Markdown a HTML protegiendo bloques LaTeX ($$...$$ y $...$)
     para evitar que python-markdown altere los guiones bajos (_) o barras (\\).
     """
     math_blocks = []
-
+ 
     def save_math(match):
         math_blocks.append(match.group(0))
         return f"@@MATH_BLOCK_{len(math_blocks) - 1}@@"
-
+ 
     # Proteger primero bloques $$...$$ y luego inline $...$
     protected = re.sub(r"\$\$[\s\S]*?\$\$", save_math, md_text)
     protected = re.sub(r"\$[^\$\n]+\$", save_math, protected)
-
+ 
     html = markdown.markdown(
         protected,
         extensions=["tables", "fenced_code", "toc"],
     )
-
+ 
     for idx, block in enumerate(math_blocks):
         html = html.replace(f"@@MATH_BLOCK_{idx}@@", block)
-
+ 
     return html
-
-
+ 
+ 
 def split_markdown_sections(raw_md: str):
     """Divide reporte.md en encabezado y secciones H2 (## ...) sin perder texto."""
     parts = re.split(r"(?m)^(?=##\s+)", raw_md)
     header_md = parts[0].strip()
     # Limpiar línea horizontal final del header si existe
     header_md = re.sub(r"\n---\s*$", "", header_md)
-
+ 
     sections = {}
     for part in parts[1:]:
         first_line = part.splitlines()[0]
         sections[first_line] = part.strip()
-
+ 
     return header_md, sections
-
-
+ 
+ 
+def references_for_tab(refs_md: str, tab_text: str) -> str:
+    """Devuelve solo las referencias APA citadas en el texto de una pestaña.
+ 
+    Cada referencia (línea que empieza con '* ') se busca en el texto por su
+    primer autor (o la sigla entre corchetes, p. ej. [BCBS]) seguida del año,
+    como aparece en las citas: "Bergstra & Bengio, 2012".
+    """
+    selected = []
+    for line in refs_md.splitlines():
+        if not line.startswith("* "):
+            continue
+        year = re.search(r"\((\d{4})\)", line)
+        acronym = re.search(r"\[([A-Z]{2,})\]", line)
+        if not year:
+            continue
+        key = acronym.group(1) if acronym else re.split(r"[,\s]", line[2:].strip(), maxsplit=1)[0]
+        pattern = rf"{re.escape(key)}[^\n]{{0,90}}?{year.group(1)}"
+        if re.search(pattern, tab_text):
+            selected.append(line)
+    if not selected:
+        return ""
+    return "## Referencias Bibliográficas (Formato APA 7.ª Edición)\n\n" + "\n".join(selected)
+ 
+ 
 def main():
     repo_root = Path(__file__).resolve().parents[1]
     md_path = repo_root / "blog" / "reporte.md"
     html_path = repo_root / "blog" / "index.html"
-
+ 
     if not md_path.exists():
         print(f"[ERROR] No existe el archivo: {md_path}")
         return
-
+ 
     raw_md = md_path.read_text(encoding="utf-8")
     md_with_b64 = embed_images_as_base64(raw_md, md_path.parent)
-
+ 
     header_md, sections = split_markdown_sections(md_with_b64)
-
+ 
     tab_pd_md = []
     tab_lgd_md = []
     tab_math_md = []
     tab_ia_md = []
     tab_audit_md = []
-
+    refs_md = ""
+ 
     for title, content in sections.items():
+        if title.startswith("## Referencias"):
+            refs_md = content
+            continue
         if "4F." in title or "Fundamentación Matemática" in title:
             tab_math_md.append(content)
         elif "1P." in title or "Parte 2:" in title:
@@ -453,18 +481,24 @@ def main():
             tab_ia_md.append(content)
             tab_audit_md.append(content)
         else:
-            # Secciones 1, 2, 3, 4, 5 y 9 van completas en Parte 1 (PD)
+            # Secciones 1, 2, 3, 4 y la discusión (5/6) van en Parte 1 (PD)
             tab_pd_md.append(content)
-
+ 
+    # Referencias: cada pestaña muestra solo las que cita (lista APA única en reporte.md)
+    for tab_list in (tab_pd_md, tab_lgd_md, tab_math_md):
+        refs = references_for_tab(refs_md, "\n".join(tab_list))
+        if refs:
+            tab_list.append(refs)
+ 
     # Si existen docs/uso_ia.md o docs/caceria_alucinacion.md, agregarlos a sus pestañas respectivas
     uso_ia_doc = repo_root / "docs" / "uso_ia.md"
     if uso_ia_doc.exists():
         tab_ia_md.append("---\n\n" + embed_images_as_base64(uso_ia_doc.read_text(encoding="utf-8"), md_path.parent))
-
+ 
     caceria_doc = repo_root / "docs" / "caceria_alucinacion.md"
     if caceria_doc.exists():
         tab_audit_md.append("---\n\n" + embed_images_as_base64(caceria_doc.read_text(encoding="utf-8"), md_path.parent))
-
+ 
     final_html = (
         HTML_TEMPLATE
         .replace("__HEADER_HTML__", md_to_html_safe_math(header_md))
@@ -474,10 +508,10 @@ def main():
         .replace("__TAB_IA__", md_to_html_safe_math("\n\n---\n\n".join(tab_ia_md)))
         .replace("__TAB_AUDIT__", md_to_html_safe_math("\n\n---\n\n".join(tab_audit_md)))
     )
-
+ 
     html_path.write_text(final_html, encoding="utf-8")
     print(f"[OK] Reporte web compilado exitosamente con 5 pestañas en: {html_path}")
-
-
+ 
+ 
 if __name__ == "__main__":
     main()

@@ -1,8 +1,11 @@
 # Estimación de Probabilidad de Incumplimiento (PD) Y Pérdida Dado el Incumplimiento (LGD) Mediante Redes Neuronales 
 
-**Curso:** Redes Neuronales y Algoritmos Bioinspirados — Semestre 2026-02  
-**Institución:** Universidad Nacional de Colombia, Sede Medellín — Facultad de Minas  
-**Autores:** Salome Murillo Gaviria, Nicolas David Zambrano Murcia 
+**Curso:** Redes Neuronales y Algoritmos Bioinspirados — Semestre 2026-02
+
+**Institución:** Universidad Nacional de Colombia, Sede Medellín — Facultad de Minas
+
+**Autores:** Salome Murillo Gaviria, Nicolas David Zambrano Murcia, Oky Ruiz De La Rosa, Andrés Pérez Cano
+
 **Enlaces del Proyecto:** [Repositorio en GitHub](https://github.com/SaloMuri/rn-trabajo-2) · [Aplicación Web Interactiva (Scorecard)](https://rn-trabajo-2-app.streamlit.app) · [Video Promocional](#)
 
 
@@ -165,6 +168,44 @@ $$\text{Factor} = \frac{\text{PDO}}{\ln(2)}, \qquad \text{Offset} = S_0 - \text{
 
 Con nuestra configuración estándar ($S_0 = 600$, $\theta_0 = 19$ equivalente a $\text{PD}_0 = 5\%$, y $\text{PDO} = 20$), se obtiene $\text{Factor} \approx 28.8539$ y $\text{Offset} \approx 515.04$. Notemos que, dado que $\ln\left(\frac{1-\hat{p}_i}{\hat{p}_i}\right) = -z_i$, el puntaje bancario es simplemente una reescalación lineal inversa del *logit* de salida de la red neuronal: $\text{Score}_i = \text{Offset} - \text{Factor} \cdot z_i$, expresado en una escala de puntuación con un puntaje base de 600 puntos, odds de referencia de 19:1 y un PDO de 20 puntos.
 
+### 4F.6. Regresión Fraccionaria para la LGD: Salida Sigmoide, BCE como Cuasi-Verosimilitud y Contraste con MSE
+
+**Problema de regresión fraccionaria.** El objetivo $y_i = \text{LGD}_i \in [0,1]$ tiene masa en $y=1$ (46.4 %) y valores continuos en $(0,1)$. Una distribución Beta no sirve, porque su densidad no admite $y=0$ ni $y=1$ exactos. Se modela la media condicional $\mathbb{E}[y \mid \mathbf{x}]$ con una red de salida sigmoide:
+
+$$\hat{y}_i = \sigma(z_i), \quad z_i = f_{\boldsymbol{\theta}}(\mathbf{x}_i), \quad \sigma(z)=\frac{1}{1+e^{-z}} \in (0,1)$$
+
+La media condicional es lo que necesita la pérdida esperada, porque $\mathbb{E}[\text{EL}] = \text{PD}\cdot\mathbb{E}[\text{LGD}]\cdot\text{EAD}$ trabaja con valores esperados.
+
+**Pérdida C: entropía cruzada binaria (BCE) con objetivo fraccionario.** Si $y \in \{0,1\}$, la verosimilitud de Bernoulli es $p^{y}(1-p)^{1-y}$ y su logaritmo negativo da la BCE. La misma expresión se puede evaluar cuando $y\in[0,1]$:
+
+$$\mathcal{L}_{\text{BCE}}(y,p) = -\left[\,y\ln p + (1-y)\ln(1-p)\,\right]$$
+
+Ya no es una verosimilitud exacta, sino una **cuasi-verosimilitud** (Gourieroux, Monfort, & Trognon, 1984; Papke & Wooldridge, 1996). Tiene tres propiedades:
+
+1. *Descomposición.* $\mathcal{L}_{\text{BCE}}(y,p) = H(y) + D_{\text{KL}}\!\left(\text{Bern}(y)\,\|\,\text{Bern}(p)\right)$, con $H(y) = -y\ln y - (1-y)\ln(1-y)$. El término $D_{\text{KL}} \ge 0$ vale cero solo si $p=y$. Por tanto, **el mínimo de la BCE no es cero**, sino la entropía del objetivo $H(y)$. Por eso las pérdidas de entrenamiento de nuestras redes están alrededor de 0.27 y eso no indica un mal ajuste.
+2. *Consistencia de la media.* Para $\mathbb{E}[y\mid\mathbf{x}]=m$, $\;\frac{d}{dp}\mathbb{E}[\mathcal{L}]= -\frac{m}{p} + \frac{1-m}{1-p} = 0 \Rightarrow p = m$, y la segunda derivada es positiva. El mínimo se alcanza en la media condicional **aunque $y$ no sea Bernoulli**. Esto exige acertar solo el primer momento, no la distribución completa.
+3. *Gradiente limpio.* Con $p=\sigma(z)$, $\;\partial\mathcal{L}_{\text{BCE}}/\partial z = p - y$.
+
+**Pérdida B (contraste): error cuadrático con salida sigmoide.** Si se supone $y\mid\mathbf{x}\sim\mathcal{N}(p,\sigma^2)$, entonces $-\ln f(y) = \frac{(y-p)^2}{2\sigma^2} + \text{cte}$, y maximizar la verosimilitud equivale a minimizar $\mathcal{L}_{\text{MSE}}=(y-p)^2$. Pero un objetivo acotado y con masa en 1 no es gaussiano, y el gradiente respecto al logit es:
+
+$$\frac{\partial\mathcal{L}_{\text{MSE}}}{\partial z} = 2\,(p-y)\,p\,(1-p)$$
+
+Este gradiente **se anula cuando $p\to 0$ o $p\to 1$**: justo en la región donde está casi la mitad de los datos, la red recibe señal débil aunque se equivoque. Ese es el argumento teórico para preferir BCE. La Sección 5.4 (Resultados y evaluación) verifica si se sostiene en la práctica.
+
+### 4F.7. Métricas de Evaluación de la LGD: MAE y RMSE
+
+$$\text{MAE} = \frac{1}{n}\sum_{i=1}^{n}|y_i-\hat{y}_i|, \qquad \text{RMSE} = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(y_i-\hat{y}_i)^2}$$
+
+El MAE equivale al estimador de máxima verosimilitud bajo ruido de Laplace y su minimizador es la **mediana** condicional. El RMSE equivale al de ruido gaussiano y su minimizador es la **media** condicional. Con una masa tan grande en 1, la mediana y la media pueden diferir bastante. Los modelos estiman la media, así que el RMSE es la métrica coherente con su pérdida, y el MAE se reporta como complemento. El RMSE penaliza más los errores grandes.
+
+### 4F.8. Inicialización de la Salida del MLP de LGD
+
+El sesgo de la capa de salida se inicializa en $\text{logit}(\bar{y}_{\text{train}})$, de modo que la red parta prediciendo la media del entrenamiento. Sin esta inicialización, en la prueba en modo demo la red predecía en promedio 0.70 (frente a 0.92 observado) y subajustaba; se reproduce con `python scripts/run_lgd.py --demo --set mlp.init_output_bias=false`.
+
+### 4F.9. Pérdida Esperada como Valor Esperado
+
+La pérdida esperada de un crédito se obtiene combinando los tres componentes. Se supone que, dado $\mathbf{x}$, la severidad (LGD, EAD) es independiente de que el incumplimiento ocurra, de modo que $\mathbb{E}[\text{pérdida}\mid\mathbf{x}] \approx \text{PD}(\mathbf{x})\cdot\mathbb{E}[\text{LGD}\mid\mathbf{x}]\cdot\mathbb{E}[\text{EAD}\mid\mathbf{x}]$.
+
 ---
 
 ## 4. Parte 1: Modelamiento de Probabilidad de Incumplimiento (PD)
@@ -302,21 +343,229 @@ En conjunto, el análisis PFI del MLP identifica `int_rate`, `annual_inc`, `dti`
 
 ---
 
-## 1P. Parte 2: Estimación de Pérdida Dado el Incumplimiento (LGD) y Pérdida Esperada
+## 5. Parte 2: Estimación de la Pérdida Dado el Incumplimiento (LGD) y de la Pérdida Esperada
 
-*(Sección reservada y pre-estructurada en el paquete `src/creditrisk/expected_loss.py` y `scripts/run_lgd.py` para la Entrega de la Parte 2).*
+### 5.1. Construcción de la variable objetivo LGD
 
-* **1P.1. Construcción de la Variable Objetivo LGD:** Filtrado del subconjunto de préstamos incumplidos ($Y=1$) y cálculo de la tasa de recuperación sobre el principal expuesto ($\text{Recovery Rate} = \frac{\text{recoveries}}{\text{funded\_amnt}}$), definiendo $\text{LGD} = \text{clip}(1 - \text{Recovery Rate}, 0, 1)$.
-* **1P.2. Desafíos Estadísticos de la LGD:** Tratamiento de la naturaleza bimodal e inflada en uno (*one-inflated*, donde la mayoría de los créditos sin garantía real tienen recuperación nula $\text{LGD} = 1.0$) mediante arquitecturas en dos etapas (*Hurdle Model* / Regresión Beta o MLP con salida acotada).
-* **1P.3. Integración de Pérdida Esperada ($\text{EL} = \widehat{\text{PD}} \cdot \widehat{\text{LGD}} \cdot \text{EAD}$):** Evaluación del error de provisión agregada a nivel de portafolio en dólares.
+**Definición.** La LGD es la fracción de la exposición que no se recupera. Para un crédito castigado $i$:
+
+$$\text{EAD}^{\text{def}}_i = \text{funded_amnt}_i - \text{total_rec_prncp}_i, \qquad \text{LGD}_i = \text{clip}\!\left(1 - \frac{\text{recoveries}_i - \text{collection_recovery_fee}_i}{\text{EAD}^{\text{def}}_i},\; 0,\; 1\right)$$
+
+- `funded_amnt`: monto desembolsado.
+- `total_rec_prncp`: capital ya pagado antes del castigo. Por eso la exposición al incumplimiento es el capital pendiente, y no el monto original.
+- `recoveries`: dinero recuperado después del castigo (cobranza, venta de cartera).
+- `collection_recovery_fee`: costo de esa cobranza, que se resta porque reduce la recuperación neta.
+- El recorte a $[0,1]$ evita valores fuera de rango por cargos y comisiones. Se descartan los créditos con $\text{EAD}^{\text{def}} \le 0$.
+
+Estas variables son posteriores a la originación. Son legítimas como **objetivo**, pero no entran como variables de entrada: el modelo usa las mismas 19 variables ex-ante de la Parte 1 (38 columnas tras la codificación).
+
+**Población.** La población principal son los créditos `Charged Off` y `Does not meet the credit policy. Status:Charged Off`: **46,009 créditos**. Los demás estados se tratan así:
+
+- `Default` (1,218 créditos con EAD válida): sus `recoveries` son cero por construcción, porque la cobranza aún no ha empezado. Si se incluyeran, tendrían LGD = 1 artificialmente. Se excluyen de la población principal y se usan solo en un análisis de sensibilidad (47,227 créditos en total).
+- `Late (31-120 days)` (11,591 créditos): su desenlace aún no se conoce, así que no tienen LGD observable.
+- Créditos pagados o vigentes: no tienen pérdida.
+
+**Tabla 6.** *Distribución de la LGD observada por partición temporal (población principal).*
+
+| Partición | $N$ | LGD media | Desv. est. | % con LGD = 1 | Error de predecir siempre 1 (MAE / RMSE) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Entrenamiento (≤ 2014-06) | 36,974 | 0.9215 | 0.1013 | 39.2 % | 0.0785 / 0.1282 |
+| Validación (2014-06 a 2014-12) | 6,262 | 0.9547 | 0.0772 | 69.7 % | 0.0453 / 0.0895 |
+| Prueba (> 2014-12) | 2,773 | 0.9807 | 0.0707 | 89.0 % | 0.0193 / 0.0732 |
+| **Total** | **46,009** | **0.9296** | — | **46.4 %** | — |
+
+*Fuente:* Elaboración propia a partir de `data/processed/lgd/lgd_target.parquet` y las particiones de `data/processed/pd/`.
+
+![Figura 7: Distribución de la LGD y LGD media por año de originación.](../reports/figures/lgd/figL1_distribucion_lgd.png)
+**Figura 7.** *La LGD se concentra en 1 y sube en los créditos más recientes: (a) distribución de la LGD observada; (b) LGD media por año de originación.*  
+*Fuente:* Elaboración propia mediante `scripts/make_figures_lgd.py`.
+
+**Limitaciones del objetivo.**
+
+1. **Censura por la derecha.** La LGD media sube de 0.92 (créditos antiguos) a 0.98 (créditos de 2015, Figura 7b). Los créditos recientes se castigaron hace poco y su cobranza aún no termina, así que se observa menos recuperación de la que habrá. Esto no es riesgo real más alto: es información incompleta, y afecta justo al conjunto de prueba (Tabla 6).
+2. **Sin valor del dinero en el tiempo.** Las recuperaciones no se descuentan, porque el conjunto de datos no trae sus fechas.
+3. **La población excluye `Default` y `Late`.** Eso es coherente con la LGD observable, pero crea un desajuste con la PD de la Parte 1 (ver 5.5).
+4. **Intereses ignorados** en la exposición: la EAD usa solo capital.
+
+### 5.2. Fundamentos matemáticos
+
+La formulación de la LGD se desarrolla en la sección de Fundamentación Matemática (4F.6 a 4F.9): regresión fraccionaria con salida sigmoide, la BCE como cuasi-verosimilitud frente al contraste con MSE, las métricas MAE y RMSE, la inicialización de la salida y la pérdida esperada como valor esperado. Aquí se usan sus resultados: el MLP-C estima la media condicional de la LGD $\mathbb{E}[y\mid\mathbf{x}]$, que es lo que necesita la pérdida esperada, y el RMSE es la métrica coherente con esa pérdida, mientras que el MAE se reporta como complemento.
+
+### 5.3. Modelos y comparación justa
+
+Todos los modelos usan el mismo preprocesador (ajustado solo con entrenamiento) y las mismas particiones (Tabla 6).
+
+- **Constante:** predice la media del entrenamiento. 1 parámetro.
+- **Referencia lineal:** regresión lineal (Ridge, $\alpha$ elegido por validación), con la predicción recortada a $[0,1]$. 39 parámetros.
+- **MLP-C:** red con salida sigmoide y pérdida BCE (la propuesta principal).
+- **MLP-B:** la misma arquitectura con pérdida MSE (contraste).
+
+**Presupuesto de búsqueda.** Las configuraciones se muestrean al azar, porque la búsqueda aleatoria suele ser más eficiente que una malla cuando pocos hiperparámetros importan (Bergstra & Bengio, 2012). La selección usa solo el RMSE de validación; el conjunto de prueba no interviene.
+
+**Tabla 7.** *Presupuesto de búsqueda y configuración elegida.*
+
+| Familia | Configuraciones | Tiempo total | Selección | Resultado |
+| :--- | :---: | :---: | :--- | :--- |
+| MLP (BCE) | 60 | 479.8 s (8.0 s por configuración) | menor RMSE de validación | `[64, 32]`, selu, dropout 0.1, rmsprop, lr 0.002, weight decay 0.0025, lote 1024 |
+| Ridge | 12 valores de $\alpha$ (0.01 a $10^4$) | 0.14 s | menor RMSE de validación | $\alpha = 0.01$ (val RMSE 0.0831) |
+| Constante | 0 | — | — | — |
+
+Además hubo **1 prueba manual previa** declarada. Se buscó solo para el MLP con BCE y la configuración elegida se reutilizó para el MLP-B; esto es una ventaja de diseño para C. El presupuesto es desigual por naturaleza (el MLP tiene más hiperparámetros que Ridge). Los tiempos se midieron en un equipo con CPU AMD Ryzen 5 150 con gráficos Radeon (3.30 GHz), 16 GB de RAM y Windows 11; con otro hardware cambian, pero no los rankings. Los espacios de búsqueda y las semillas están en `configs/lgd.yaml`.
+
+**Treinta semillas.** La configuración final de cada red se entrena con 30 semillas (0 a 29). La semilla cambia la inicialización, el orden de los lotes y el dropout; los datos son fijos. Por eso la variabilidad reportada es la del **entrenamiento**, no la del muestreo de datos.
+
+**Tabla 8.** *Resultados en el conjunto de prueba con 30 semillas: media ± desviación estándar [mejor, peor].*
+
+| Modelo | Parámetros | MAE | RMSE |
+| :--- | :---: | :---: | :---: |
+| Constante (media del entrenamiento) | 1 | 0.0807 | 0.0922 |
+| Regresión lineal (Ridge) | 39 | 0.0780 | 0.0924 |
+| **MLP sigmoide + BCE (C)** | **4,609** | **0.0729 ± 0.0030** [0.0658, 0.0781] | **0.0885 ± 0.0020** [0.0842, 0.0928] |
+| MLP sigmoide + MSE (B) | 4,609 | 0.0729 ± 0.0057 [0.0614, 0.0828] | 0.0876 ± 0.0039 [0.0808, 0.0952] |
+
+*Nota:* La constante y la lineal son deterministas (desviación 0). *Fuente:* Elaboración propia a partir de `reports/tables/lgd/main/seeds_summary.csv` (`scripts/run_seeds_lgd.py`; 30 semillas × 2 redes en 480 s).
+
+![Figura 8: Resultados por semilla.](../reports/figures/lgd/figL4_semillas.png)
+**Figura 8.** *RMSE y MAE en prueba de cada una de las 30 semillas para las dos redes, con las referencias deterministas.*  
+*Fuente:* Elaboración propia mediante `scripts/make_figures_lgd.py`.
+
+### 5.4. Resultados y evaluación
+
+**Aporte de la red sobre la línea base.** El MLP-C reduce el RMSE de prueba de 0.0924 a 0.0885 (**−4.2 %**) y el MAE de 0.0780 a 0.0729 (**−6.5 %**). Supera a la lineal en RMSE en 29 de 30 semillas y en MAE en 29 de 30. A cambio usa unas 118 veces más parámetros (4,609 frente a 39). Este resultado es coherente con la literatura sobre LGD: Loterman et al. (2012) encuentran que los métodos no lineales, en particular las máquinas de vectores de soporte y las redes neuronales, superan a la regresión lineal, pero que gran parte de la varianza de la LGD queda sin explicar (R² promedio entre 4 % y 43 %). La mejora existe, pero es modesta, y depende de la semilla: el RMSE del MLP-C va de 0.0842 a 0.0928, y su peor caso (0.0928) es peor que el de la lineal (0.0924).
+
+**BCE frente a MSE: la ventaja teórica no aparece en el error medio.**
+
+- C gana a B en RMSE en solo 13 de 30 semillas. La diferencia media (C − B) es +0.00086, con desviación 0.0034: no es significativa (prueba $t$ pareada $p=0.17$; Wilcoxon $p=0.28$). En MAE las medias son iguales (0.0729).
+- Lo que sí se observa es que **C es más estable**: su desviación en RMSE (0.0020) es la mitad de la de B (0.0039), y el peor caso de B (0.0952) es peor que el de C (0.0928). Es consistente con el argumento del gradiente de 5.2, pero no lo prueba.
+- Por tanto, BCE se justifica por la teoría (salida acotada, cuasi-verosimilitud, gradiente que no se anula) y por su estabilidad, **no** por un error medio menor.
+
+**Entrenamiento inestable.** Con la configuración elegida, el RMSE de validación oscila entre épocas (por ejemplo, de 0.0798 a 0.0939 en la ejecución final), y la parada temprana actúa alrededor de la época 18 en promedio. Elegir la mejor época y la mejor configuración es en parte suerte (*winner's curse*): la configuración ganadora tuvo val RMSE 0.0798 en la búsqueda, pero su media en 30 semillas es 0.0809. Por eso se reportan medias, y no el mejor valor.
+
+![Figura 9: Curvas de entrenamiento.](../reports/figures/lgd/figL2_curvas_entrenamiento.png)
+**Figura 9.** *RMSE de validación por época de las dos redes con la configuración final.*  
+*Fuente:* Elaboración propia mediante `scripts/make_figures_lgd.py`.
+
+![Figura 10: Búsqueda de hiperparámetros.](../reports/figures/lgd/figL5_busqueda_hiperparametros.png)
+**Figura 10.** *RMSE de validación de las 60 configuraciones del MLP, por optimizador.*  
+*Fuente:* Elaboración propia mediante `scripts/make_figures_lgd.py`.
+
+**Distribución predicha frente a observada.**
+
+**Tabla 9.** *Distribución de la LGD en el conjunto de prueba (modelo guardado, semilla 42).*
+
+| Serie | Media | Desv. est. | Q05 | Q95 | % ≥ 0.99 | Wasserstein | KS |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Observada | 0.981 | 0.071 | 0.850 | 1.000 | 89.1 % | — | — |
+| Constante | 0.922 | 0.000 | 0.922 | 0.922 | 0.0 % | 0.081 | 0.893 |
+| Regresión lineal | 0.924 | 0.021 | 0.905 | 0.942 | 0.0 % | 0.074 | 0.891 |
+| MLP-C | 0.935 | 0.020 | 0.917 | 0.948 | 0.0 % | 0.066 | 0.891 |
+| MLP-B | 0.932 | 0.013 | 0.922 | 0.941 | 0.0 % | 0.069 | 0.891 |
+
+*Fuente:* Elaboración propia a partir de `reports/tables/lgd/main/distribution_test.csv`.
+
+Ningún modelo reproduce la masa en LGD = 1: el 89 % de los créditos observados tiene LGD ≥ 0.99, y los modelos no predicen nada por encima de 0.97 (Figura 11). Las predicciones son estrechas y centradas cerca de 0.93, con distancia de Wasserstein baja (0.066 a 0.081) frente a una distribución observada casi degenerada en 1. Esto es esperable para un estimador de la media cuando los datos de prueba son más extremos que los de entrenamiento.
+
+![Figura 11: Distribución acumulada predicha y observada.](../reports/figures/lgd/figL3_distribucion_pred_vs_obs.png)
+**Figura 11.** *Función de distribución acumulada de la LGD en el conjunto de prueba (n = 2,773), observada frente a predicha.*  
+*Fuente:* Elaboración propia mediante `scripts/make_figures_lgd.py`.
+
+**Advertencia crítica: el error absoluto del conjunto de prueba depende del desplazamiento temporal.** Como la LGD observada sube con el tiempo (Tabla 6; censura), una predicción constante de 1 tiene en prueba un error **menor** que todos los modelos: MAE 0.0193 y RMSE 0.0732, frente a 0.0729 y 0.0885 del MLP-C. En validación ocurre lo contrario (RMSE de predecir 1: 0.0895, frente a 0.0809 del MLP). Esta no es una referencia que se haya entrenado: es un chequeo de cordura calculado a posteriori. Muestra que, en la cohorte de 2015, los modelos entrenados con el pasado subestiman la LGD, y que las diferencias entre modelos (centésimas) son menores que el efecto del desplazamiento. Las conclusiones sobre "mejor modelo" deben leerse como comparaciones **entre modelos bajo el mismo desplazamiento**, no como evidencia de una LGD bien estimada en 2015.
+
+**Sensibilidad: incluir `Default`.** Con los 1,218 créditos `Default` añadidos (LGD = 1 por construcción), el MLP-C obtiene en prueba un RMSE de 0.0871 frente a 0.0898 de la lineal, y el MLP-B 0.0870 (una ejecución, semilla 42; `reports/tables/lgd/with_default/`). La conclusión relativa no cambia. Para comparar poblaciones distintas sin sesgo, el archivo de resultados incluye las columnas `*_sinDefault`, que evalúan sobre el mismo subconjunto de prueba.
+
+### 5.5. Pérdida esperada ($\text{EL}=\text{PD}\cdot\text{LGD}\cdot\text{EAD}$)
+
+**Componentes.** PD: MLP de la Parte 1. LGD: MLP-C de la Parte 2. EAD: lo que se debe cuando el crédito incumple. Para un crédito nuevo no se conoce, así que se estima con dos definiciones:
+
+- **EAD A (sin amortización):** $\widehat{\text{EAD}} = \text{monto}$. Es simple y conservadora.
+- **EAD B (principal):** $\widehat{\text{EAD}} = \text{monto}\times r_{\text{plazo}}$, con $r_{\text{plazo}}$ la razón media $\text{EAD}^{\text{def}}/\text{monto}$ de los créditos castigados del entrenamiento: 0.658 (36 meses), 0.818 (60 meses), 0.713 (global). Refleja que el cliente ya pagó parte del capital antes de caer, y que a 60 meses se amortiza más despacio. A queda como análisis de sensibilidad.
+
+Los supuestos y la formulación de la pérdida esperada como valor esperado están en 4F.9.
+
+**Evaluación.** Se calcula sobre los créditos del conjunto de prueba con pérdida conocida (25,757 de 30,835). La pérdida realizada es $\text{LGD}_i\cdot\text{EAD}^{\text{def}}_i$ para los castigados y cero para los pagados; se excluyen los `Default` y `Late` (5,078), cuya pérdida final se desconoce.
+
+**Tabla 10.** *Pérdida esperada frente a pérdida realizada en prueba (25,757 créditos).*
+
+| EAD | EL total (USD) | EL / realizada | Spearman por crédito | MAE de EAD en castigados (USD) | Sesgo de EAD (USD) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| A | 84,935,697 | 2.20 | 0.176 | 901 | +901 |
+| **B (principal)** | **63,927,574** | **1.65** | **0.174** | 3,049 | −2,974 |
+| Realizada | 38,666,227 | 1.00 | — | — | — |
+
+*Fuente:* Elaboración propia a partir de `reports/tables/lgd/main/expected_loss_summary.json` (`scripts/run_expected_loss.py`).
+
+**Tabla 11.** *Pérdida esperada y pérdida realizada media por decil de pérdida esperada (EAD B), USD por crédito.*
+
+| Decil | $N$ | EL media predicha | Pérdida realizada media | Razón |
+| :---: | :---: | :---: | :---: | :---: |
+| 1 | 2,576 | 197.0 | 91.4 | 2.16 |
+| 2 | 2,576 | 401.3 | 250.0 | 1.61 |
+| 3 | 2,575 | 607.3 | 454.0 | 1.34 |
+| 4 | 2,576 | 859.9 | 596.7 | 1.44 |
+| 5 | 2,576 | 1,190.8 | 784.1 | 1.52 |
+| 6 | 2,575 | 1,679.9 | 1,196.5 | 1.40 |
+| 7 | 2,576 | 2,421.7 | 1,710.2 | 1.42 |
+| 8 | 2,575 | 3,533.9 | 2,282.0 | 1.55 |
+| 9 | 2,576 | 5,162.4 | 3,080.5 | 1.68 |
+| 10 | 2,576 | 8,764.5 | 4,566.3 | 1.92 |
+
+*Fuente:* Elaboración propia a partir de `reports/tables/lgd/main/expected_loss_deciles_B.csv`.
+
+![Figura 12: Pérdida esperada frente a pérdida realizada por decil.](../reports/figures/lgd/figL6_perdida_esperada_deciles.png)
+**Figura 12.** *La pérdida esperada ordena bien el riesgo, pero sobreestima su nivel: media por decil de pérdida esperada, esperada frente a realizada (EAD B).*  
+*Fuente:* Elaboración propia mediante `scripts/make_figures_lgd.py`.
+
+**Lectura.**
+
+1. **Ordena el riesgo por grupos, no por crédito.** La pérdida realizada crece con el decil (de 91 a 4,566 USD), pero la correlación de Spearman por crédito es solo 0.17: el modelo discrimina poco entre créditos individuales, y la utilidad está en el agregado.
+2. **Sobreestima el nivel** (1.65 veces la pérdida realizada con B). La causa principal es un **desajuste de definiciones**: la PD de la Parte 1 cuenta como "malos" los `Charged Off`, `Default` y `Late (31-120)`, mientras que la pérdida realizada solo observa castigados. La PD media predicha en el subconjunto evaluado es 0.225, frente a una tasa de castigados observada de 0.108 (2.1 veces), antes de tocar la LGD o la EAD.
+3. **La LGD subestima** (media predicha 0.935 frente a 0.981 observada en los castigados), por la censura y el desplazamiento temporal (5.1). Este sesgo actúa en sentido contrario y atenúa la sobreestimación total.
+4. **A frente a B: no basta con el total.** En el total, B se acerca más a la pérdida realizada (1.65 frente a 2.20). Pero a nivel de crédito, A estima mejor la EAD en prueba (MAE 901 frente a 3,049 USD): en la cohorte de 2015 los créditos castigados lo hicieron pronto, con razón EAD/monto cercana a 0.94 y no 0.71 (censura otra vez). B subestima la EAD, y su total queda más cerca solo porque compensa la sobreestimación de la PD. Por tanto, el resultado de B no es evidencia de que sea mejor estimador de la EAD.
+
+### 5.6. Interpretabilidad
+
+Se usa la importancia por permutación (Breiman, 2001; Fisher, Rudin, & Dominici, 2019): se baraja una variable en el conjunto de prueba y se mide cuánto **aumenta el RMSE**. Las variables nominales (`purpose`, `home_ownership`, etc.) se expanden en varias columnas, que aquí se barajan **juntas** con la misma permutación para medir la variable original.
+
+![Figura 13: Interpretabilidad de la LGD.](../reports/figures/lgd/figL7_interpretabilidad.png)
+**Figura 13.** *Aumento del RMSE al barajar cada variable original, para el MLP-C y para la regresión lineal.*  
+*Fuente:* Elaboración propia mediante `scripts/make_figures_lgd.py` y `src/creditrisk/lgd_interpretability.py`.
+
+- **`int_rate` domina en ambos modelos** (aumento de RMSE: 0.00038 en el MLP y 0.00184 en la lineal), igual que en la PD (Tabla 5).
+- **El MLP reparte algo más el peso:** en el MLP, `annual_inc` (0.00017) equivale al 45 % de `int_rate`; en la lineal, `annual_inc` (0.00016) es solo el 9 % de `int_rate`. `term` aporta 0.00005 en ambos. Ninguna otra variable pasa de 0.00005 en el MLP.
+- **Las magnitudes son pequeñas** (milésimas de punto de RMSE, sobre un error de 0.0885), lo que concuerda con que la mejora sobre la constante es modesta: casi toda la señal está en la tasa de interés.
+- **Los coeficientes de la regresión lineal son inestables:** `int_rate` sale con signo negativo y `grade` con positivo, porque ambas variables son casi colineales (la tasa se asigna según el grado). Por eso los coeficientes individuales no deben leerse como efectos aislados; la importancia por permutación es más fiable.
+
+### 5.7. Reproducibilidad
+
+```
+python scripts/run_lgd.py                  # referencias y MLP con la configuración por defecto
+python scripts/run_search_lgd.py           # búsqueda (escribe configs/lgd_best.yaml)
+python scripts/run_lgd.py --best           # modelos finales
+python scripts/run_seeds_lgd.py            # 30 semillas
+python scripts/run_expected_loss.py        # pérdida esperada
+python scripts/make_figures_lgd.py         # figuras e interpretabilidad
+```
+
+Equivalentes en el `Makefile`: `lgd`, `search-lgd`, `seeds-lgd`, `el`, `figures-lgd`. El modo `--demo` ejecuta una versión reducida. Con las mismas versiones de las librerías (`requirements.txt`; los modelos de PD se guardaron con scikit-learn 1.7.2), dos máquinas dan resultados iguales salvo ruido numérico del orden de la cuarta cifra decimal; los rankings de configuraciones casi empatadas pueden cambiar.
+
+### 5.8. Discusión, limitaciones y aprendizajes de la Parte 2
+
+1. **Qué aportó la red.** Mejora la línea base lineal en 4.2 % (RMSE) y 6.5 % (MAE), de forma consistente (29 de 30 semillas), con 118 veces más parámetros. Es una mejora real pero pequeña, y menor que el efecto del desplazamiento temporal sobre el error (5.4). Para un banco, el MLP solo se justifica si la mejora vale el costo de mantener un modelo menos transparente.
+2. **BCE no supera a MSE en error medio.** Se justifica teóricamente y por su menor variabilidad entre semillas, pero la diferencia de error no es significativa.
+3. **La censura es el principal límite.** La LGD de créditos recientes está subestimada en recuperación (sobreestimada como pérdida) porque la cobranza no termina. Una extensión natural es modelar la recuperación como función del tiempo transcurrido desde el castigo, o excluir cohortes sin madurez suficiente.
+4. **La pérdida esperada necesita definiciones coherentes entre partes.** El mayor error del total (1.65 veces) viene de que la PD y la pérdida realizada no miden el mismo evento. Alinear la definición de "incumplimiento" entre PD y LGD es más importante que mejorar la red.
+5. **La mejor corrida no es el resultado.** Con curvas inestables y selección sobre una sola semilla, el valor reportable es la media de 30 semillas.
+6. **Qué se aprendió del proceso.** Verificar el conteo de estados antes de modelar (el estado `Late` no tiene LGD observable), comprobar con un baseline trivial que la métrica tiene sentido, y no tomar cifras ni citas de un asistente de IA sin revisarlas contra los datos o la fuente.
 
 ---
 
-## 5. Discusión Crítica, Limitaciones y Recomendaciones
+## 6. Discusión Crítica, Limitaciones y Recomendaciones
 
 1. **Magnitud de la Mejora del MLP sobre Datos Tabulares:** En el conjunto de prueba, la Regresión Logística obtuvo un ROC-AUC de 0.6902, mientras que el MLP alcanzó 0.6960, lo que representa una diferencia de 0.0058 a favor de la red neuronal. El intervalo de confianza bootstrap del 95 % para esta diferencia fue [0.0036, 0.0080], sin incluir cero. En cuanto al estadístico KS, la Regresión Logística obtuvo 0.2839 y el MLP 0.2941, una diferencia de 0.0102. Aunque los resultados favorecen al MLP en ambas métricas, la mejora en ROC-AUC es moderada y debe interpretarse en el contexto de la partición temporal utilizada. Estos resultados no demuestran por sí solos que la ventaja provenga de la capacidad del MLP para capturar relaciones no lineales.
 2. **Diferencias Temporales en la Tasa de Incumplimiento:** La tasa de incumplimiento observada aumenta del 20.46 % en el conjunto de entrenamiento al 27.12 % en validación y al 25.46 % en prueba. Estas diferencias muestran que la frecuencia del evento objetivo no es constante entre las particiones temporales y justifican evaluar la calibración del modelo al aplicarlo a nuevas cohortes. Sin embargo, este resultado no permite concluir por sí solo que exista deriva de covariables (*covariate drift*) o deriva del concepto (*concept drift*), ni establecer sus causas. Como trabajo futuro, se recomienda implementar un cálculo del Índice de Estabilidad Poblacional (PSI) para monitorizar los cambios en la distribución de las variables de entrada, junto con evaluaciones periódicas de calibración y discriminación.
 3. **Umbral de Decisión y Consideraciones de Negocio:** El umbral que maximiza la separación entre las distribuciones de probabilidades de buenos y malos pagadores puede utilizarse como referencia para analizar la capacidad discriminativa del modelo. En la curva KS generada por `scripts/make_figures.py`, dicho umbral es aproximadamente $\tau^* = 0.216$, equivalente a un puntaje de alrededor de 552 puntos en la escala de la *scorecard*. Sin embargo, este valor no debe interpretarse automáticamente como el punto de corte óptimo para aprobar o rechazar solicitudes: el estadístico KS mide separación entre distribuciones, pero no incorpora por sí solo los ingresos por intereses, las pérdidas por incumplimiento ni los demás costes de la decisión. Para definir una política operativa, sería necesario especificar y justificar los costes y beneficios relevantes, incluida la pérdida dado el incumplimiento (LGD), y evaluar la decisión resultante en datos apropiados.
+4. **Censura y evaluación temporal en la LGD (Parte 2):** La LGD observada crece con el año de originación (0.92 en entrenamiento, 0.98 en prueba) porque la cobranza de los créditos recientes aún no termina. Por eso una predicción constante de 1 tiene en prueba un error menor (MAE 0.0193, RMSE 0.0732) que los modelos entrenados con el pasado (RMSE 0.0885 del MLP-C), y lo contrario ocurre en validación. Las comparaciones entre modelos de la Sección 1P son válidas bajo el mismo desplazamiento, pero no demuestran una LGD bien estimada en la cohorte de 2015.
+5. **Coherencia entre PD y LGD en la pérdida esperada:** La pérdida esperada total supera 1.65 veces la realizada (EAD B). La causa principal es que la PD de la Parte 1 trata como "malos" a `Charged Off`, `Default` y `Late (31-120)`, mientras que la pérdida realizada solo observa castigados (PD media predicha 0.225 frente a 0.108 observada en el subconjunto evaluado). Alinear la definición de incumplimiento entre PD y LGD es más importante que mejorar la red.
 
 ---
 
@@ -342,17 +591,17 @@ En cumplimiento de los lineamientos de transparencia académica del curso, el de
 ## Referencias Bibliográficas (Formato APA 7.ª Edición)
 
 * Basel Committee on Banking Supervision [BCBS]. (2017). *Basel III: Finalising post-crisis reforms*. Bank for International Settlements. https://www.bis.org/bcbs/publ/d424.htm
-* Grinsztajn, L., Oyallon, E., & Varoquaux, G. (2022). Why do tree-based models still outperform deep learning on typical tabular data? *Advances in Neural Information Processing Systems (NeurIPS)*, 35, 507–520.
-* Hand, D. J., & Henley, W. E. (1997). Statistical classification methods in consumer credit scoring: A review. *Journal of the Royal Statistical Society: Series A (Statistics in Society)*, 160(3), 523–541. https://doi.org/10.1111/j.1467-985X.1997.00078.x
+* Bergstra, J., & Bengio, Y. (2012). Random search for hyper-parameter optimization. *Journal of Machine Learning Research*, *13*, 281–305. https://jmlr.org/papers/v13/bergstra12a.html
+* Breiman, L. (2001). Random forests. *Machine Learning*, *45*(1), 5–32. https://doi.org/10.1023/A:1010933404324
+* Fisher, A., Rudin, C., & Dominici, F. (2019). All models are wrong, but many are useful: Learning a variable's importance by studying an entire class of prediction models simultaneously. *Journal of Machine Learning Research*, *20*(177), 1–81. https://www.jmlr.org/papers/v20/18-760.html
+* Gourieroux, C., Monfort, A., & Trognon, A. (1984). Pseudo maximum likelihood methods: Theory. *Econometrica*, *52*(3), 681–700. https://econometricsociety.org/publications/econometrica/1984/05/01/pseudo-maximum-likelihood-methods-theory
+* Grinsztajn, L., Oyallon, E., & Varoquaux, G. (2022). Why do tree-based models still outperform deep learning on typical tabular data? *Advances in Neural Information Processing Systems (NeurIPS)*, *35*, 507–520.
+* Hand, D. J., & Henley, W. E. (1997). Statistical classification methods in consumer credit scoring: A review. *Journal of the Royal Statistical Society: Series A (Statistics in Society)*, *160*(3), 523–541. https://doi.org/10.1111/j.1467-985X.1997.00078.x
 * International Accounting Standards Board [IASB]. (2014). *IFRS 9 Financial Instruments*. IFRS Foundation.
 * Ioffe, S., & Szegedy, C. (2015). Batch normalization: Accelerating deep network training by reducing internal covariate shift. En *Proceedings of the 32nd International Conference on Machine Learning (ICML)* (pp. 448–456). PMLR.
-* Lessmann, S., Baesens, B., Seow, H.-V., & Thomas, L. C. (2015). Benchmarking state-of-the-art classification algorithms for credit scoring: An update of research. *European Journal of Operational Research*, 247(1), 124–136. https://doi.org/10.1016/j.ejor.2015.05.030
+* Lessmann, S., Baesens, B., Seow, H.-V., & Thomas, L. C. (2015). Benchmarking state-of-the-art classification algorithms for credit scoring: An update of research. *European Journal of Operational Research*, *247*(1), 124–136. https://doi.org/10.1016/j.ejor.2015.05.030
+* Loterman, G., Brown, I., Martens, D., Mues, C., & Baesens, B. (2012). Benchmarking regression algorithms for loss given default modeling. *International Journal of Forecasting*, *28*(1), 161–170. https://ideas.repec.org/a/eee/intfor/v28y2012i1p161-170.html
+* Papke, L. E., & Wooldridge, J. M. (1996). Econometric methods for fractional response variables with an application to 401(k) plan participation rates. *Journal of Applied Econometrics*, *11*(6), 619–632.
 * Siddiqi, N. (2017). *Intelligent credit scoring: Building and implementing better credit risk scorecards* (2nd ed.). John Wiley & Sons. https://doi.org/10.1002/9781119282396
-* Srivastava, N., Hinton, G., Krizhevsky, A., Sutskever, I., & Salakhutdinov, R. (2014). Dropout: A simple way to prevent neural networks from overfitting. *Journal of Machine Learning Research*, 15(56), 1929–1958.
+* Srivastava, N., Hinton, G., Krizhevsky, A., Sutskever, I., & Salakhutdinov, R. (2014). Dropout: A simple way to prevent neural networks from overfitting. *Journal of Machine Learning Research*, *15*(56), 1929–1958.
 * Thomas, L., Crook, J., & Edelman, D. (2017). *Credit scoring and its applications* (2nd ed.). Society for Industrial and Applied Mathematics (SIAM). https://doi.org/10.1137/1.9781611974560
-* Bergstra, J., & Bengio, Y. (2012). Random search for hyper-parameter optimization. *Journal of Machine Learning Research, 13*, 281–305. https://jmlr.org/papers/v13/bergstra12a.html
-* Breiman, L. (2001). Random forests. *Machine Learning, 45*(1), 5–32. https://doi.org/10.1023/A:1010933404324
-* Fisher, A., Rudin, C., & Dominici, F. (2019). All models are wrong, but many are useful: Learning a variable's importance by studying an entire class of prediction models simultaneously. *Journal of Machine Learning Research, 20*(177), 1–81. https://www.jmlr.org/papers/v20/18-760.html
-* Gourieroux, C., Monfort, A., & Trognon, A. (1984). Pseudo maximum likelihood methods: Theory. *Econometrica, 52*(3), 681–700. https://econometricsociety.org/publications/econometrica/1984/05/01/pseudo-maximum-likelihood-methods-theory
-* Loterman, G., Brown, I., Martens, D., Mues, C., & Baesens, B. (2012). Benchmarking regression algorithms for loss given default modeling. *International Journal of Forecasting, 28*(1), 161–170. https://ideas.repec.org/a/eee/intfor/v28y2012i5161-170.html
-* Papke, L. E., & Wooldridge, J. M. (1996). Econometric methods for fractional response variables with an application to 401(k) plan participation rates. *Journal of Applied Econometrics, 11*(6), 619–632.
