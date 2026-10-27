@@ -1,94 +1,180 @@
-# 🏦 Redes Neuronales para Datos Tabulares: ¿Me Prestas?
-## Estimación de Probabilidad de Incumplimiento (PD), Scorecard y Pérdida Dado el Incumplimiento (LGD)
+# Credit Risk NN: ¿me prestas?
 
-**Universidad Nacional de Colombia — Sede Medellín (Facultad de Minas)**  
-**Departamento de Ciencias de la Computación y de la Decisión**  
-**Curso:** Redes Neuronales y Algoritmos Bioinspirados (Semestre 2026-02)
+Trabajo 2 de *Redes neuronales y algoritmos bioinspirados* (Universidad Nacional de Colombia, Sede Medellín, Facultad de Minas, 2026-02). Redes neuronales para datos tabulares aplicadas al riesgo de crédito con el conjunto *Lending Club*.
 
----
+| Recurso | Enlace |
+|---|---|
+| Repositorio | https://github.com/SaloMuri/rn-trabajo-2 |
+| Reporte técnico | [`blog/index.html`](blog/index.html) (versión web, se abre en el navegador) y [`blog/reporte.md`](blog/reporte.md) (fuente) |
+| Aplicación web | https://rn-trabajo-2-app.streamlit.app |
+| Video promocional | (pendiente) |
 
-## 🔗 Enlaces Principales del Proyecto
+**Integrantes:** Salome Murillo Gaviria, Nicolas David Zambrano Murcia, Oky Ruiz De La Rosa y Andrés Pérez Cano.
 
-* 📊 **[Reporte Técnico Interactivo (Blog Web en 5 Pestañas)](https://salomuri.github.io/rn-trabajo-2/blog/)** *(Versión Markdown en [`blog/reporte.md`](blog/reporte.md))*
-* 🚀 **[Aplicación Web Interactiva (Scorecard & Simulador Contrafactual)](https://rn-trabajo-2-app.streamlit.app/)** *(Código en [`app/app.py`](app/app.py))*
-* 🎬 **[Video Promocional del Proyecto (YouTube)](https://youtube.com/)** *(Reemplazar con enlace definitivo)*
+## Videos de contribución individual
 
----
+En cumplimiento de los lineamientos de evaluación del curso, se incluyen los enlaces a los videos de contribución individual:
 
-## 🎥 Videos de Contribución Individual e Integrantes
-
-En cumplimiento de los lineamientos de evaluación del curso, a continuación se presentan los enlaces a los **4 videos de contribución individual** donde cada integrante expone y sustenta sus aportes técnicos al repositorio:
-
-| # | Integrante | Rol / Módulos Principales Desarrollados | Enlace al Video de Contribución Individual |
+| # | Integrante | Rol / módulos principales desarrollados | Video |
 | :-: | :--- | :--- | :---: |
-| **1** | **Salomé Murillo Gaviria** | Pipeline de Datos PD (`build_dataset.py`), Evaluación *Out-of-Time*, Hipótesis de Riesgo (`make_figures.py`), Interpretabilidad PFI y Reporte Web (`build_blog.py`). | [▶️ Ver Video Contribución 1](https://youtube.com/REEMPLAZAR_LINK_1) |
-| **2** | **Nicolás David Zambrano Murcia** | Arquitectura Neuronal MLP y Estabilidad en 30 Semillas (`run_pd.py`), Derivación de Scorecard Bancaria (`scorecard.py`), Modelamiento LGD (`run_lgd.py`) y App (`app.py`). | [▶️ Ver Video Contribución 2]https://youtu.be/edYUph7pUao?si=n_rByvtvuN6mSLIf|
-| **3** | **Andres Perez Cano/ Contribución Técnica 3**  Experimentación de Hiperparámetros (`run_search.py`), Calibración Isotónica y Auditoría Matemática. | [▶️ Ver Video Contribución 3](https://youtube.com/REEMPLAZAR_LINK_3) |
-| **4** | **Oky Ruiz de la Rosa / Contribución Técnica 4** | Pérdida Esperada ($\mathbb{E}[L]$), Análisis de Sensibilidad LGD (`--include-default`), Pruebas Unitarias (`tests/`) y Cacería de Alucinaciones. | [▶️ Ver Video Contribución 4](https://youtube.com/REEMPLAZAR_LINK_4) |
+| 1 | Salomé Murillo Gaviria | Pipeline de datos PD, evaluación *Out-of-Time*, hipótesis de riesgo, interpretabilidad PFI y reporte web. | [Video de contribución 1](https://youtube.com/REEMPLAZAR_LINK_1) |
+| 2 | Nicolás David Zambrano Murcia | Arquitectura neuronal MLP y estabilidad en 30 semillas, derivación de *scorecard*, modelamiento LGD y aplicación. | [Video de contribución 2](https://youtu.be/edYUph7pUao?si=n_rByvtvuN6mSLIf) |
+| 3 | Andrés Pérez Cano | Experimentación de hiperparámetros, calibración isotónica y auditoría matemática. | [Video de contribución 3](https://youtube.com/REEMPLAZAR_LINK_3) |
+| 4 | Oky Ruiz de la Rosa | Pérdida esperada, análisis de sensibilidad LGD, pruebas unitarias y cacería de alucinaciones. | [Video de contribución 4](https://youtube.com/REEMPLAZAR_LINK_4) |
 
----
+## Qué hace el proyecto
 
-## 📌 Resumen Ejecutivo y Resultados Clave
+Se estima la **pérdida esperada** de un crédito, `EL = PD × LGD × EAD`, con redes neuronales y modelos de referencia lineales, bajo las mismas particiones temporales (entrenamiento hasta 2014-06, validación hasta 2014-12 y prueba después).
 
-Este proyecto implementa un sistema reproducible de extremo a extremo (*end-to-end*) para la cuantificación del riesgo de crédito de consumo sobre el conjunto histórico de **Lending Club (`2007-06` a `2015-12`, 887,379 registros brutos $\times$ 74 columnas)**:
+| Parte | Tarea | Modelos | Resultado |
+|---|---|---|---|
+| 1 | Probabilidad de incumplimiento (PD) y *scorecard* | Regresión logística frente a MLP | Ver sección 4 del reporte |
+| 2 | Pérdida dado el incumplimiento (LGD, regresión) y pérdida esperada | Constante, regresión lineal (Ridge), MLP sigmoide + BCE y MLP sigmoide + MSE | Ver sección 5 del reporte |
 
-1. **Parte 1 — Probabilidad de Incumplimiento (PD) y Scorecard (`268,530` créditos cerrados válidos):**
-   * **Prevención de *Data Leakage*:** Selección estricta de variables disponibles exclusivamente en el instante de originación ($t_0$), expandidas a **38 características** tras *One-Hot Encoding*.
-   * **Partición Temporal Estricta (*Out-of-Time*):**
-     * `Train` ($\le \text{Jun } 2014$): **202,707** registros (75.49% | Tasa de incumplimiento: **20.46%**).
-     * `Val` ($\text{Jul } 2014 - \text{Dic } 2014$): **34,988** registros (13.03% | Tasa de incumplimiento: **27.12%**).
-     * `Test OOT` ($\text{Ene } 2015 - \text{Dic } 2015$): **30,835** registros (11.48% | Tasa de incumplimiento: **25.46%**).
-   * **Desempeño en Prueba (*Out-of-Time*):** El modelo **MLP `[64, 32]`** (`4,801` parámetros entrenables, `BatchNorm`, `ReLU`, `Dropout=0.2`, `AdamW`) alcanza **ROC-AUC = `0.6983`**, **Gini = `0.3966`**, **KS = `0.2923`** y **Brier Score calibrado = `0.1731`**, superando de forma consistente a la Regresión Logística (`39` parámetros, AUC = `0.6939`) a lo largo de **30 semillas independientes** ($\mu_{\text{AUC}} = 0.6970 \pm 0.0014$).
-   * **Scorecard Bancaria (`300–850` puntos):** Escalamiento analítico con $P_0 = 600$, $\text{Odds}_0 = 19:1$ ($\text{PD}_0 = 5\%$) y $\text{PDO} = 20$ ($\text{Factor} \approx 28.8539$, $\text{Offset} \approx 515.04$).
+**Resultados de la Parte 2** (conjunto de prueba, media ± desviación estándar con 30 semillas; menor es mejor):
 
-2. **Parte 2 — Pérdida Dado el Incumplimiento (LGD) y Pérdida Esperada ($\mathbb{E}[L]$):**
-   * Estimación de la severidad de pérdida $\text{LGD} \in [0, 1]$ sobre los **46,009 préstamos castigados (`Charged Off`)** (y análisis de sensibilidad con **47,227 registros** incluyendo `Default`), comparando regresores lineales (Ridge), modelos de dos etapas y redes neuronales MLP con salida sigmoide acotada para el cálculo de la provisión financiera $\mathbb{E}[L]_i = \text{PD}_i \cdot \text{LGD}_i \cdot \text{EAD}_i$.
+| Modelo | Parámetros | MAE | RMSE |
+|---|---:|---:|---:|
+| Constante (media del entrenamiento) | 1 | 0.0807 | 0.0922 |
+| Regresión lineal (Ridge) | 39 | 0.0780 | 0.0924 |
+| MLP sigmoide + BCE | 4,609 | 0.0729 ± 0.0030 | 0.0885 ± 0.0020 |
+| MLP sigmoide + MSE | 4,609 | 0.0729 ± 0.0057 | 0.0876 ± 0.0039 |
 
----
+La pérdida esperada total del conjunto de prueba (EAD B) es 1.65 veces la pérdida realizada, por una diferencia de definiciones entre la PD y la LGD. El reporte explica esta y las demás limitaciones (censura de la LGD en los créditos recientes, entre otras) en la sección 5.
 
-## 📂 Estructura del Repositorio
+## Instalación
 
-```text
-rn-trabajo-2/
-├── app/
-│   └── app.py                         # Aplicación web interactiva en Streamlit (Scorecard, Percentil y Contrafactual)
-├── blog/
-│   ├── reporte.md                     # Fuente Markdown del reporte técnico completo
-│   └── index.html                     # Reporte web autocontenido (5 pestañas, MathJax e imágenes Base64)
-├── configs/
-│   ├── base.yaml                      # Semilla global (seed=42), rutas y parámetros de Scorecard
-│   ├── pd.yaml                        # Configuración completa del pipeline de Parte 1 (PD y MLP)
-│   ├── demo.yaml                      # Configuración rápida para pruebas de humo (demo)
-│   ├── lgd.yaml                       # Configuración de búsqueda de hiperparámetros para Parte 2 (LGD)
-│   ├── lgd_best.yaml                  # Configuración del modelo ganador de LGD para 30 semillas
-│   └── lgd_demo.yaml                  # Configuración rápida de demostración para LGD
-├── data/
-│   ├── raw/                           # Datos crudos de Kaggle (loan.csv y LCDataDictionary.xlsx)
-│   └── processed/
-│       ├── pd/                        # Particiones procesadas (train.parquet, test.parquet, reference_dist.parquet)
-│       └── lgd/                       # Población objetivo LGD (lgd_target.parquet y lgd_target_with_default.parquet)
-├── docs/
-│   ├── uso_ia.md                      # Bitácora transparente de prompts e impacto de la IA
-│   └── caceria_alucinacion.md         # 5 hallazgos reales documentados en la Cacería de la Alucinación
-├── models/
-│   ├── pd/                            # Pesos entrenados (mlp_best.pt, lr_baseline.joblib, preprocessor.joblib)
-│   └── lgd/                           # Artefactos y pesos entrenados del modelo LGD
-├── outputs/
-│   ├── figures/                       # Gráficas de alta resolución (300 DPI) para PD y LGD
-│   └── tables/                        # Resultados de búsqueda, estabilidad en 30 semillas, PFI y métricas JSON
-├── scripts/
-│   ├── build_dataset.py               # Construcción y auditoría del dataset a partir de data/raw/loan.csv
-│   ├── run_pd.py                      # Pipeline completo de entrenamiento, evaluación, 30 semillas y PFI (Parte 1)
-│   ├── run_search.py                  # Búsqueda estructurada de arquitecturas e hiperparámetros PD
-│   ├── run_seeds.py                   # Evaluación de estabilidad estocástica en 30 semillas para PD
-│   ├── make_figures.py                # Generación de las 6 figuras de la Parte 1 con pruebas estadísticas
-│   ├── build_lgd_target.py            # Construcción de la variable objetivo LGD (Charged Off / Default)
-│   ├── eda_lgd.py                     # Análisis exploratorio y gráficas de distribución bimodal de LGD
-│   ├── run_lgd.py                     # Entrenamiento de modelos de referencia y MLP para LGD (Parte 2)
-│   ├── run_lgd_seeds.py               # Evaluación de estabilidad en 30 semillas para el mejor MLP de LGD
-│   ├── eval_expected_loss.py          # Integración de PD x LGD x EAD y evaluación de Pérdida Esperada
-│   └── build_blog.py                  # Compilador del blog HTML en 5 pestañas con imágenes Base64
-├── src/creditrisk/                    # Paquete modular Python (data, features, models, evaluation, scorecard)
-├── tests/                             # Suite de pruebas unitarias automatizadas (pytest)
-├── Makefile                           # Automatización de comandos de ejecución
-└── requirements.txt                   # Dependencias del proyecto con versiones fijadas, es importante correrlo antes de realizar cualquier experimento o sección del trabajo.
+Requiere **Python 3.10 o superior**. Las versiones de las librerías están fijadas en [`requirements.txt`](requirements.txt). Los modelos guardados con `joblib` se generaron con `scikit-learn==1.7.2`, así que conviene no cambiar esa versión.
+
+**Linux y macOS**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+source setup.sh
+```
+
+**Windows**
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+setup
+```
+
+Para comprobar la instalación:
+
+```bash
+pytest -q
+```
+
+Deben pasar las 20 pruebas.
+
+## Datos
+
+- **Fuente:** Kaggle, *Lending Club Loan Data* (`ranadeep/credit-risk-dataset`). Detalles en [`data/raw/README.md`](data/raw/README.md).
+- **Archivo original** (`data/raw/loan.csv`, unos 450 MB): **no se versiona** en git. Solo hace falta para regenerar los datos procesados.
+- **Datos procesados:** sí están versionados, en formato Parquet: las particiones de PD en `data/processed/pd/` y el objetivo de LGD en `data/processed/lgd/`. Con ellos se pueden reproducir todos los experimentos sin descargar el original.
+
+Para regenerarlos desde el original (poner `loan.csv` en `data/raw/`):
+
+```bash
+python src/creditrisk/data/build_dataset.py        # particiones de PD
+python src/creditrisk/data/build_lgd_target.py      # objetivo de LGD (población principal)
+python src/creditrisk/data/build_lgd_target.py --include-default   # variante con `Default` (sensibilidad)
+```
+
+## Ejecución: un comando por experimento
+
+Cada experimento se ejecuta con un comando desde la raíz del proyecto. Con `make` (Linux y macOS) o con el comando de Python (cualquier sistema, incluido Windows sin `make`):
+
+| Experimento | `make` | Comando de Python |
+|---|---|---|
+| Parte 1: PD (referencia y MLP) | `make pd` | `python scripts/run_pd.py` |
+| Parte 1: búsqueda de hiperparámetros | `make search` | `python scripts/run_search.py` |
+| Parte 1: 30 semillas | `make seeds` | `python scripts/run_seeds.py` |
+| Parte 1: figuras | `make figures` | `python scripts/make_figures.py` |
+| Parte 2: LGD (referencias y MLP) | `make lgd` | `python scripts/run_lgd.py` |
+| Parte 2: LGD con `Default` (sensibilidad) | `make lgd-sens` | `python scripts/run_lgd.py --population with_default` |
+| Parte 2: búsqueda de hiperparámetros | `make search-lgd` | `python scripts/run_search_lgd.py` |
+| Parte 2: 30 semillas | `make seeds-lgd` | `python scripts/run_seeds_lgd.py` |
+| Parte 2: pérdida esperada | `make el` | `python scripts/run_expected_loss.py` |
+| Parte 2: figuras e interpretabilidad | `make figures-lgd` | `python scripts/make_figures_lgd.py` |
+| Parte 1: demo (muestra pequeña) | `make demo` | `python scripts/run_pd.py --config configs/demo.yaml` |
+| Parte 2: demo completa (modelos, pérdida esperada y figuras) | `make demo-lgd` | `python scripts/run_lgd.py --demo` y luego `python scripts/run_expected_loss.py` y `python scripts/make_figures_lgd.py` |
+| Aplicación web | `make app` | `streamlit run app/app.py` |
+| Pruebas | `make test` | `pytest -q` |
+
+Orden para reproducir la Parte 2 completa:
+
+```bash
+python scripts/run_lgd.py            # 1. referencias y MLP con la configuración por defecto
+python scripts/run_search_lgd.py     # 2. búsqueda (escribe configs/lgd_best.yaml)
+python scripts/run_lgd.py --best     # 3. modelos finales con la mejor configuración
+python scripts/run_seeds_lgd.py      # 4. 30 semillas
+python scripts/run_expected_loss.py  # 5. pérdida esperada (necesita los modelos de PD de la Parte 1)
+python scripts/make_figures_lgd.py   # 6. figuras e interpretabilidad
+```
+
+Los parámetros se cambian sin editar código, con los archivos de `configs/` o con `--set ruta=valor`; por ejemplo, `python scripts/run_lgd.py --set mlp.epochs=30`.
+
+### Modo demostración (menos de 2 minutos)
+
+```bash
+make demo        # Parte 1: PD con una muestra pequeña (unos 24 s)
+make demo-lgd    # Parte 2: modelos de LGD, pérdida esperada y figuras (unos 30 s)
+```
+
+Sin `make`, los comandos equivalentes son:
+
+```bash
+python scripts/run_pd.py --config configs/demo.yaml    # Parte 1: PD con una muestra pequeña
+python scripts/run_lgd.py --demo                       # Parte 2: modelos de LGD con una muestra pequeña
+python scripts/run_expected_loss.py                    # Parte 2: pérdida esperada con los modelos finales
+python scripts/make_figures_lgd.py                     # Parte 2: figuras e interpretabilidad
+```
+
+Los tiempos son de una prueba en un entorno Linux en la nube (PD unos 24 segundos; LGD, pérdida esperada y figuras unos 30 segundos en total). Las demos de los modelos se guardan en carpetas aparte (`models/lgd_demo/`, `reports/tables/lgd_demo/`, `reports/tables/pd/comparison_demo.csv`) y no sobrescriben los resultados completos. Con la muestra reducida, las cifras de `run_lgd.py --demo` son distintas de las del reporte; la pérdida esperada y las figuras usan los modelos finales, por lo que sus cifras coinciden con las del reporte.
+
+La demo de la Parte 2 no incluye la construcción del objetivo de LGD (necesita `data/raw/loan.csv`, que no se versiona), la búsqueda de hiperparámetros (unos 8 minutos) ni las 30 semillas completas (unos 8 minutos). Para ver el análisis de la búsqueda y de las semillas, abrir `reports/tables/lgd/main/search_budget.json` y `seeds_summary.csv`.
+
+## Semillas y reproducibilidad
+
+- **Semilla global:** 42 (en `configs/base.yaml`, `configs/pd.yaml` y `configs/lgd.yaml`). Fija la inicialización, el orden de los lotes y el *dropout*.
+- **Treinta semillas:** la configuración final de cada red se entrena con las semillas 0 a 29 y se reporta media, desviación estándar, mejor y peor valor. En el modelo de LGD la semilla cambia la inicialización, el orden de los lotes y el *dropout*; los datos y las particiones son fijos.
+- **Versiones fijas:** `requirements.txt` fija las versiones exactas de todas las librerías.
+- **Datos y modelos guardados:** los datos procesados, los modelos (`models/`) y las tablas (`reports/tables/`) están versionados.
+- **Diferencias entre equipos:** dos equipos con las mismas versiones dan resultados iguales salvo un ruido numérico pequeño (cuarta cifra decimal), por el tipo de procesador y los hilos. Los rankings de configuraciones casi empatadas pueden cambiar, pero las conclusiones no.
+
+## Hardware y tiempos
+
+Parte 2 medida en un equipo con CPU AMD Ryzen 5 150 con gráficos Radeon (3.30 GHz), 16 GB de RAM y Windows 11:
+
+| Experimento | Tiempo aproximado |
+|---|---|
+| Búsqueda de hiperparámetros del MLP de LGD (60 configuraciones) | 8 minutos |
+| 30 semillas × 2 redes | 8 minutos |
+| Un entrenamiento del MLP de LGD | 8 a 15 segundos |
+
+Con otro hardware los tiempos cambian.
+
+## Estructura
+
+| Ruta | Para qué existe |
+|---|---|
+| `configs/` | Parámetros de los experimentos; permiten cambiarlos sin editar código. `lgd_best.yaml` lo genera la búsqueda. |
+| `data/raw/` | Documenta el origen de los datos originales (no se versionan). |
+| `data/processed/` | Datos procesados que usan los modelos (versionados). |
+| `src/creditrisk/` | Código de la librería: datos, modelos, métricas, *scorecard*, interpretabilidad, pérdida esperada. |
+| `scripts/` | Puntos de entrada de los experimentos, de las figuras y del reporte web (`build_blog.py`). |
+| `models/` | Modelos entrenados (versionados). |
+| `reports/` | Figuras y tablas generadas por el código. |
+| `app/` | Aplicación web. |
+| `blog/` | Fuente del reporte técnico (`reporte.md`) y su versión web (`index.html`, se genera con `python scripts/build_blog.py`). |
+| `docs/` | Bitácoras de uso de IA y cacería de la alucinación. |
+| `tests/` | Pruebas. |
+
+## Uso de IA y cacería de la alucinación
+
+- [`docs/uso_ia.md`](docs/uso_ia.md): registro de las interacciones con asistentes de IA (Gemini en la Parte 1 y Claude en la Parte 2).
+- [`docs/caceria_alucinacion.md`](docs/caceria_alucinacion.md): errores de la IA encontrados, con su evidencia, y verificaciones sin hallazgo.
