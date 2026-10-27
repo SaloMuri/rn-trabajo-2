@@ -5,7 +5,7 @@ Trabajo 2 de *Redes neuronales y algoritmos bioinspirados* (Universidad Nacional
 | Recurso | Enlace |
 |---|---|
 | Repositorio | https://github.com/SaloMuri/rn-trabajo-2 |
-| Reporte técnico | [`blog/index.html`](blog/index.html) (versión web, se abre en el navegador) y [`blog/reporte.md`](blog/reporte.md) (fuente) |
+| Reporte técnico | [`blog/index.html`](https://salomuri.github.io/rn-trabajo-2/blog/) (versión web, se abre en el navegador) y [`blog/reporte.md`](blog/reporte.md) (fuente) |
 | Aplicación web | https://rn-trabajo-2-app.streamlit.app |
 | Video promocional | (pendiente) |
 
@@ -30,6 +30,14 @@ Se estima la **pérdida esperada** de un crédito, `EL = PD × LGD × EAD`, con 
 |---|---|---|---|
 | 1 | Probabilidad de incumplimiento (PD) y *scorecard* | Regresión logística frente a MLP | Ver sección 4 del reporte |
 | 2 | Pérdida dado el incumplimiento (LGD, regresión) y pérdida esperada | Constante, regresión lineal (Ridge), MLP sigmoide + BCE y MLP sigmoide + MSE | Ver sección 5 del reporte |
+
+### **Resultados de la Parte 1 (PD y Scorecard — Conjunto de prueba Out-of-Time, media ± desviación estándar con 30 semillas)**
+
+| Modelo | Parámetros Entrenables | ROC-AUC | Índice de Gini | Estadístico KS | Brier Score (Calibrado) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Regresión Logística (Baseline)** | 39 | 0.6899 | 0.3799 | 0.2829 | 0.1756 |
+| **Perceptrón Multicapa (MLPGanador)** | 4,801 | 0.6983 | 0.3966 | 0.2923 | 0.1731 |
+| **MLP (Estabilidad 30 Semillas)** | 4,801 | **0.6970 ± 0.0014** | **0.3940 ± 0.0029** | **0.2918 ± 0.0035** | **0.1732 ± 0.0003** |
 
 **Resultados de la Parte 2** (conjunto de prueba, media ± desviación estándar con 30 semillas; menor es mejor):
 
