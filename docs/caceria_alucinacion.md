@@ -1,7 +1,8 @@
-# Bitácora de Uso de Inteligencia Artificial
 # Cacería de la alucinación 🎯
 
 Las herramientas de IA producen errores que suenan convincentes. Su misión es cazarlos. A continuación se documentan los hallazgos en los que el asistente de IA generó información incorrecta, imprecisa, desactualizada o subóptima durante el desarrollo del trabajo.
+
+Este documento reúne cuatro hallazgos con evidencia (los tres de la Parte 1, desarrollada con Gemini / Argon, y uno de la Parte 2, desarrollada con Claude) y una verificación sin hallazgo (Verificación 5, sobre la reproducibilidad de la Parte 2). Cada hallazgo incluye el prompt, la parte relevante de la respuesta de la IA, cómo se sospechó el error, la evidencia, la categoría, la corrección y la lección aprendida. En la verificación se describe qué se comprobó, cómo y con qué resultado.
 
 ### Hallazgo 1: Gemini afirma que en `requirements.txt` se usan versiones de librerías inexistentes
 1. **Prompt utilizado:**
@@ -53,31 +54,36 @@ Las herramientas de IA producen errores que suenan convincentes. Su misión es c
    Ser minuiciosos al momento de escribir variables asociadas al conjunto de datos, verificando que sean identicas o en defecto, cubrir las posibles variantes.
 ---
 
-### Hallazgo 4: [Pendiente de completar]
+### Hallazgo 4: La IA reporta una mejora de "3.5 % en RMSE" que era la del MAE
 1. **Prompt utilizado:**
-   > [Escribe aquí el prompt literal]
+   > Listo, ya corrí `run_lgd.py --best`, `run_seeds_lgd.py` y `run_expected_loss.py`. Aquí está la salida. Sigamos con las figuras y la interpretabilidad, y dime qué muestra cada figura y qué resultados importantes tenemos para el reporte.
 2. **Parte relevante de la respuesta de la IA:**
-   > [Copia aquí la respuesta relevante de la IA]
+   > L4: el MLP gana en promedio sobre las 30 semillas. La ganancia es de 3.5 % en RMSE frente a la regresión lineal, con unas 1,000 veces más parámetros (51,201 frente a 39).
 3. **Cómo sospechamos que había un error:**
-   [Explica la sospecha]
+   Al revisar los resultados de nuestra ejecución (30 semillas), el número no coincidía con la tabla de RMSE.
 4. **Evidencia que lo demuestra:**
-   [Detalla la derivación, experimento o prueba]
-5. **Categoría:** [Matemáticas / Código / Datos del mundo real / Bibliografía / Conceptos]
+   Con los resultados de esa ejecución (previa a la corrección de los datos, con 51,201 parámetros): RMSE lineal 0.0924 frente a MLP-C 0.0890, es decir, −3.7 %. El 3.5 % correspondía al MAE (0.0779 frente a 0.0752). La IA corrigió la cifra en un mensaje posterior. Es un error pequeño, pero real y comprobable con la fórmula $(0.0924-0.0890)/0.0924$.
+5. **Categoría:** Matemáticas (cálculo de un porcentaje)
 6. **La corrección:**
-   [Describe la solución]
+   Se recalculó con los CSV (`seeds_summary.csv`). Con los datos corregidos (761 créditos recuperados) el reporte usa las cifras finales: −4.2 % en RMSE y −6.5 % en MAE.
 7. **Lección Aprendida:**
+   Todo porcentaje que dé la IA hay que recalcularlo a mano desde las tablas antes de ponerlo en el reporte.
+
 ---
 
-### Hallazgo 5: [Pendiente de completar]
-1. **Prompt utilizado:**
-   > [Escribe aquí el prompt literal]
-2. **Parte relevante de la respuesta de la IA:**
-   > [Copia aquí la respuesta relevante de la IA]
-3. **Cómo sospechamos que había un error:**
-   [Explica la sospecha]
-4. **Evidencia que lo demuestra:**
-   [Detalla la derivación, experimento o prueba]
-5. **Categoría:** [Matemáticas / Código / Datos del mundo real / Bibliografía / Conceptos]
-6. **La corrección:**
-   [Describe la solución]
-7. **Lección Aprendida:**
+### Verificación 5 (sin hallazgo): Reproducibilidad y consistencia de los resultados de la Parte 2
+1. **Qué se verificó:**
+   Que los resultados de la Parte 2 fueran reproducibles entre equipos y coherentes con los datos, para descartar que la IA hubiera reportado cifras que no salen del código.
+2. **Cómo se verificó:**
+   - *Reproducibilidad entre equipos:* se ejecutaron `run_lgd.py --best`, `run_seeds_lgd.py` y `run_expected_loss.py` en el entorno de la IA y en el equipo de la autora de la Parte 2, y se compararon las salidas. La comparación se hizo antes de corregir el bug de PD (761 créditos); tras la corrección solo se re-ejecutó en el equipo de la autor de la Parte 2.
+   - *Conteos del objetivo:* se comparó la salida de `build_lgd_target.py` con el `value_counts` de `loan_status` del dataset.
+   - *Pruebas automáticas:* se ejecutó `pytest -q tests`.
+3. **Resultado:**
+   - Las cifras coincidieron salvo ruido numérico de la cuarta cifra decimal (por ejemplo, MLP-C: RMSE de prueba 0.0887 y MLP-B 0.0881 en ambos; pérdida esperada con EAD B / realizada 1.6174 en ambos). Solo cambiaron los tiempos de ejecución, por el hardware.
+   - Los conteos cuadran: 45,248 `Charged Off` + 761 de política = 46,009 filas; 1,219 `Default` menos 1 con EAD ≤ 0 (se filtra) = 1,218, que sumados dan 47,227. La diferencia de 1 frente a lo esperado inicialmente se explica por ese `Default`.
+   - `pytest -q tests`: pasan las 20 pruebas.
+4. **Evidencia:**
+   Salidas de terminal de `run_lgd.py`, `run_seeds_lgd.py` y `run_expected_loss.py` en ambos equipos; `reports/tables/lgd/main/`; `tests/`.
+5. **Categoría:** Verificación (sin error detectado)
+6. **Lección Aprendida:**
+   Fijar semillas, versiones de las librerías y datos procesados versionados permite reproducir resultados en otra máquina; las pequeñas diferencias numéricas pueden cambiar el orden de configuraciones casi empatadas, pero no las conclusiones.
