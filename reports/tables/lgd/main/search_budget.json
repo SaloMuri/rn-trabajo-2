@@ -3,12 +3,12 @@
   "semilla": 42,
   "mlp": {
     "configuraciones": 60,
-    "tiempo_total_s": 463.8,
-    "tiempo_medio_s": 7.73
+    "tiempo_total_s": 479.8,
+    "tiempo_medio_s": 8.0
   },
   "ridge": {
     "configuraciones": 12,
-    "tiempo_total_s": 0.2
+    "tiempo_total_s": 0.14
   },
   "pruebas_manuales_previas_declaradas": 1,
   "criterio_de_seleccion": "menor RMSE de validación (el test no se usó)",

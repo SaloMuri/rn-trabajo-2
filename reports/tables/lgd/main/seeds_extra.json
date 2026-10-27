@@ -1,7 +1,7 @@
 {
   "n_semillas": 30,
-  "tiempo_total_s": 455.2,
-  "tiempo_medio_por_entrenamiento_s": 7.54,
+  "tiempo_total_s": 480.4,
+  "tiempo_medio_por_entrenamiento_s": 7.96,
   "C_gana_a_lineal_test_rmse": "29/30",
   "C_gana_a_lineal_test_mae": "29/30",
   "C_gana_a_B_test_rmse": "13/30",
