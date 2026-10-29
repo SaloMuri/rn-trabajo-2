@@ -44,7 +44,7 @@ Por consiguiente, un modelo de riesgo crediticio no puede evaluarse únicamente 
 ## 3. Datos, Prevención de Fuga de Información (*Data Leakage*) e Hipótesis
 
 ### 3.1. Construcción de la Variable Objetivo y Filtrado del Universo
-El conjunto de datos original (`loan.csv`, *Credit Risk Analysis*, Kaggle) contiene **887.379 registros** y **74 variables**, con créditos originados entre junio de 2007 y diciembre de 2015. La variable objetivo se codificó según la guía del trabajo:
+El conjunto de datos original (`loan.csv`, *Credit Risk Analysis*, Kaggle, descargados en Octubre de 2026) contiene **887.379 registros** y **74 variables**, con créditos originados entre junio de 2007 y diciembre de 2015. La variable objetivo se codificó según la guía del trabajo:
 * **Buenos pagadores ($Y=0$):** `Fully Paid` (207.723) y `Does not meet the credit policy. Status:Fully Paid` (1.988).
 * **Malos pagadores ($Y=1$):** `Charged Off` (45.248), `Default` (1.219), `Late (31-120 days)` (11.591) y `Does not meet the credit policy. Status:Charged Off` (761).
 
@@ -240,19 +240,23 @@ Para comparar ambas familias de modelos, se realizó una búsqueda de hiperpará
 
 Para ambas familias se aplicó la misma regla: se elige la configuración más simple (menos parámetros) cuyo ROC-AUC de validación esté a menos de 0,002 del mejor de su familia. En la regresión logística todas las configuraciones tienen 39 parámetros y su AUC de validación varía menos de 0,001, por lo que se conservó `C=1,0`; en el MLP, `MLP_1` (0,7146) cumple la regla frente a `MLP_4` (0,7160).
 
+En total entrenamos 12 configuraciones: 6 de regresión logística y 6 de MLP. La búsqueda tardó 182,5 s (2,7 s la logística y 179,8 s los MLP), y las 30 semillas de la red final tardaron otros 756,8 s. En total fueron unos 939 s (cerca de 16 min) de cómputo.
+
+La búsqueda fue pequeña a propósito: probamos distinta profundidad, ancho, activación y regularización, pero dejamos fijos el optimizador (AdamW) y el tamaño de lote. Por eso no afirmamos que la configuración elegida sea la óptima. El margen de 0,002 lo fijamos mirando la variabilidad entre semillas (desviación de 0,0014 en el AUC de prueba): diferencias menores a ese orden no las distinguimos del azar.
+
 **Tabla 2.** *Resultados de la búsqueda de hiperparámetros para Regresión Logística y Perceptrón Multicapa (MLP).*
 
 | ID | Familia | Configuración | Parámetros | Tiempo (s) | Val AUC | Val Gini | Val KS | Val Brier |
 |:---|:---|:---|---:|---:|---:|---:|---:|---:|
 | LR_1 | Regresión Logística | C=0.001; sin ponderación | 39 | 0.30 | 0.7089 | 0.4178 | 0.3081 | 0.1793 |
-| LR_2 | Regresión Logística | C=0.01; sin ponderación | 39 | 0.68 | 0.7086 | 0.4172 | 0.3101 | 0.1794 |
-| LR_3 | Regresión Logística | C=0.1; sin ponderación | 39 | 0.43 | 0.7084 | 0.4168 | 0.3094 | 0.1795 |
-| LR_4 | Regresión Logística | C=1.0; sin ponderación | 39 | 0.41 | 0.7084 | 0.4168 | 0.3093 | 0.1795 |
-| LR_5 | Regresión Logística | C=10.0; sin ponderación | 39 | 0.42 | 0.7084 | 0.4168 | 0.3093 | 0.1794 |
-| LR_6 | Regresión Logística | C=1.0; ponderación balanceada | 39 | 0.54 | 0.7085 | 0.4171 | 0.3083 | 0.2257 |
+| LR_2 | Regresión Logística | C=0.01; sin ponderación | 39 | 0.61 | 0.7086 | 0.4172 | 0.3101 | 0.1794 |
+| LR_3 | Regresión Logística | C=0.1; sin ponderación | 39 | 0.44 | 0.7084 | 0.4168 | 0.3094 | 0.1795 |
+| LR_4 | Regresión Logística | C=1.0; sin ponderación | 39 | 0.40 | 0.7084 | 0.4168 | 0.3093 | 0.1795 |
+| LR_5 | Regresión Logística | C=10.0; sin ponderación | 39 | 0.40 | 0.7084 | 0.4168 | 0.3093 | 0.1794 |
+| LR_6 | Regresión Logística | C=1.0; ponderación balanceada | 39 | 0.56 | 0.7085 | 0.4171 | 0.3083 | 0.2257 |
 | MLP_1 | MLP | Capas [64, 32]; ReLU; dropout 0.15; LR=0.001 | 4.801 | 22.02 | 0.7146 | 0.4292 | 0.3139 | 0.1769 |
 | MLP_2 | MLP | Capas [128, 64]; ReLU; dropout 0.25; LR=0.001 | 13.697 | 19.62 | 0.7143 | 0.4286 | 0.3149 | 0.1768 |
-| MLP_3 | MLP | Capas [128, 64, 32]; ReLU; dropout 0.25; LR=0.001 | 15.809 | 29.96 | 0.7158 | 0.4316 | 0.3153 | 0.1788 |
+| MLP_3 | MLP | Capas [128, 64, 32]; ReLU; dropout 0.25; LR=0.001 | 15.809 | 28.10 | 0.7158 | 0.4316 | 0.3153 | 0.1788 |
 | MLP_4 | MLP | Capas [128, 64, 32]; GELU; dropout 0.25; LR=0.001 | 15.809 | 36.59 | 0.7160 | 0.4321 | 0.3146 | 0.1774 |
 | MLP_5 | MLP | Capas [256, 128, 64]; ReLU; dropout 0.35; LR=0.0005 | 52.097 | 45.52 | 0.7154 | 0.4308 | 0.3151 | 0.1763 |
 | MLP_6 | MLP | Capas [128, 64, 32]; tanh; dropout 0.20; LR=0.001 | 15.809 | 27.98 | 0.7122 | 0.4244 | 0.3143 | 0.1796 |
@@ -277,7 +281,7 @@ En el historial registrado (`reports/tables/pd/mlp_training_history.csv`) aparec
 *Fuente:* Elaboración propia a partir del historial `reports/tables/pd/mlp_training_history.csv`.
 
 ### 4.3. Evaluación Comparativa en Conjunto de Prueba (*Out-of-Time*) y Poder Discriminante
-Al evaluar ambos modelos en el conjunto de prueba temporal (*Test Set Out-of-Time*), el Perceptrón Multicapa obtiene mejores resultados que la Regresión Logística en las cuatro métricas registradas en `reports/tables/pd/comparison_pd.csv`. El ROC-AUC aumenta de 0.6902 a 0.6960, el índice de Gini de 0.3804 a 0.3919 y el estadístico KS de 0.2839 a 0.2941. El Brier Score disminuye de 0.1754 a 0.1735, lo que indica una mejora en esta métrica de error probabilístico. Estas diferencias describen los resultados de la ejecución registrada; por sí solas, no demuestran que la mejora sea estadísticamente significativa ni que se mantenga en todas las semillas.
+Al evaluar ambos modelos en el conjunto de prueba temporal (*Test Set Out-of-Time*), el Perceptrón Multicapa obtiene mejores resultados que la Regresión Logística en las cuatro métricas registradas en `reports/tables/pd/comparison_pd.csv`. El ROC-AUC aumenta de 0.6902 a 0.6960, el índice de Gini de 0.3804 a 0.3919 y el estadístico KS de 0.2839 a 0.2941. El Brier Score disminuye de 0.1754 a 0.1735, lo que indica una mejora en esta métrica de error probabilístico. Estas diferencias describen los resultados de la ejecución registrada; por sí solas, no demuestran que la mejora sea estadísticamente significativa ni que se mantenga en todas las semillas. El MLP de la *Tabla 3* es la corrida con semilla 42. La media de las 30 semillas (Tabla 4) es 0,6968 en AUC, prácticamente igual. Las curvas de comparación respectivas se ven en la *Figura 3*.
 
 **Tabla 3.** *Comparación de desempeño de la Regresión Logística y el MLP en la evaluación final.*
 
@@ -293,13 +297,13 @@ Al evaluar ambos modelos en el conjunto de prueba temporal (*Test Set Out-of-Tim
 *Fuente:* Elaboración propia mediante `scripts/make_figures.py` a partir de las predicciones de prueba (`reports/tables/pd/test_predictions.csv`).
 
 ### 4.4. Calibración Probabilística, Estabilidad Estocástica (30 Semillas) y *Scorecard*
-La **Figura 4** presenta las curvas de calibración (*Reliability Diagram*) de ambos modelos, construidas con 10 intervalos de igual amplitud en el conjunto de prueba. La tasa global observada de incumplimiento es del 25.46 %, mientras que las probabilidades medias predichas son del 22.76 % para la Regresión Logística y del 23.89 % para el MLP. En promedio, ambos modelos subestiman la frecuencia observada de incumplimiento en aproximadamente 2.70 y 1.57 puntos porcentuales, respectivamente. Sin embargo, las diferencias entre las probabilidades predichas y las frecuencias observadas varían entre intervalos, por lo que no puede afirmarse que exista una subestimación uniforme del 3–4 %. El cambio temporal entre los datos históricos y la cohorte de prueba constituye un posible factor contextual, pero estos resultados descriptivos no bastan para establecer que sea la causa de las diferencias de calibración.
+La **Figura 4** presenta las curvas de calibración (*Reliability Diagram*) de ambos modelos, construidas con 10 intervalos de igual amplitud en el conjunto de prueba. La tasa global observada de incumplimiento es del 25.46 %, mientras que las probabilidades medias predichas son del 22.76 % para la Regresión Logística y del 23.89 % para el MLP. En promedio, ambos modelos subestiman la frecuencia observada de incumplimiento en aproximadamente 2.70 y 1.57 puntos porcentuales, respectivamente. Con 10 intervalos vemos que el MLP subestima el riesgo cuando la probabilidad predicha es menor a 0,4 (por ejemplo, en 0,2–0,3 predice 24,7 % y observamos 28,3 %), pero lo sobreestima algo entre 0,4 y 0,6. La regresión logística hace lo mismo, y su sobreestimación sigue en intervalos más altos. Los intervalos por encima de 0,6 tienen muy pocos créditos en el MLP (18), así que no sacamos conclusiones de ahí. El cambio temporal entre los datos históricos y la cohorte de prueba constituye un posible factor contextual, pero estos resultados descriptivos no bastan para establecer que sea la causa de las diferencias de calibración.
 
 ![Figura 4: Curva de calibración probabilística (Reliability Diagram) en el conjunto de prueba.](../reports/figures/pd/fig4_curva_calibracion.png)
 **Figura 4.** *Curvas de calibración probabilística (Reliability Diagram) de la Regresión Logística y el MLP en el conjunto de prueba ($N = 30,835$).* 
 *Fuente:* Elaboración propia mediante `scripts/make_figures.py`.
 
-Para evaluar la estabilidad del Perceptrón Multicapa, se realizaron 30 ejecuciones con distintas semillas aleatorias, identificadas en el script `scripts/run_seeds.py`. Se resumen la media, la desviación estándar, el mejor resultado y el peor resultado de cada métrica de evaluación. Esta evaluación permite observar la variabilidad entre ejecuciones del modelo; por sí sola, no demuestra significancia estadística frente a la Regresión Logística ni garantiza que el rendimiento se mantenga en otros conjuntos de datos.
+Para evaluar la estabilidad del Perceptrón Multicapa, se realizaron 30 ejecuciones con distintas semillas aleatorias, identificadas en el script `scripts/run_seeds.py`. Se resumen la media, la desviación estándar, el mejor resultado y el peor resultado de cada métrica de evaluación. Esta evaluación permite observar la variabilidad entre ejecuciones del modelo; por sí sola, no demuestra significancia estadística frente a la Regresión Logística ni garantiza que el rendimiento se mantenga en otros conjuntos de datos. Los resultados se pueden ver en la *Tabla 4*.
 
 **Tabla 4.** *Variabilidad de las métricas del MLP en 30 ejecuciones con distintas semillas.*
 
@@ -314,7 +318,7 @@ Para evaluar la estabilidad del Perceptrón Multicapa, se realizaron 30 ejecucio
 
 Como análisis complementario, se comparó el ROC-AUC de ambos modelos sobre las mismas observaciones del conjunto de prueba mediante un bootstrap pareado y estratificado por clase, con 5.000 remuestreos y semilla aleatoria fija. La Regresión Logística obtuvo un ROC-AUC de 0.6902, mientras que el MLP alcanzó 0.6960, con una diferencia de 0.0058 a favor de la red neuronal. El intervalo de confianza bootstrap del 95% para esta diferencia fue [0.0036, 0.0080], sin incluir cero. Estos resultados respaldan una ventaja de discriminación del MLP en el conjunto de prueba analizado. Sin embargo, no se reporta un valor p porque no se realizó una prueba de hipótesis específica, y la diferencia observada no demuestra por sí sola que la mejora se deba a la captura de relaciones no lineales.
 
-Las probabilidades estimadas por el MLP se transforman en puntajes mediante la escala de *scorecard* definida en `src/creditrisk/scorecard.py`. En el conjunto de prueba, los puntajes observados se encuentran aproximadamente entre 500.50 y 744.71 puntos. La Figura 5 presenta la distribución de los puntajes para buenos pagadores e incumplidos y la tasa de incumplimiento observada por decil de puntaje. Esta tasa disminuye del 48.70 % en el decil de menor puntaje al 5.80 % en el decil de mayor puntaje. El resultado muestra una asociación descriptiva entre mayores puntajes y menor riesgo observado en este conjunto de prueba; no obstante, estos deciles no constituyen por sí solos umbrales operativos validados para aprobar o rechazar solicitudes.
+Las probabilidades estimadas por el MLP se transforman en puntajes mediante la escala de *scorecard* definida en `src/creditrisk/scorecard.py`. El 98 % central de los puntajes de prueba está entre 508 y 615 puntos (percentiles 1 y 99), con mediana de 553. El mínimo (500,5) y el máximo (744,7) son valores extremos: solo 4 créditos superan 650. La Figura 5 presenta la distribución de los puntajes para buenos pagadores e incumplidos y la tasa de incumplimiento observada por decil de puntaje. Esta tasa disminuye del 48.70 % en el decil de menor puntaje al 5.80 % en el decil de mayor puntaje. El resultado muestra una asociación descriptiva entre mayores puntajes y menor riesgo observado en este conjunto de prueba; no obstante, estos deciles no constituyen por sí solos umbrales operativos validados para aprobar o rechazar solicitudes.
 
 ![Figura 5: Distribución del Credit Score y tasa de incumplimiento real por banda de riesgo del Scorecard.](../reports/figures/pd/fig5_scorecard_distribucion.png)
 **Figura 5.** *Distribución de puntajes del Scorecard por estado crediticio (izquierda) y tasa de incumplimiento observada por decil de puntaje (derecha).* 
@@ -350,7 +354,7 @@ También aparecen variables relacionadas con el historial y las condiciones del 
 Estos resultados deben interpretarse con cautela. La importancia por permutación puede verse afectada por la correlación entre variables y por la representación de las categorías mediante variables indicadoras (*one-hot encoding*). Además, la importancia predictiva no permite concluir que modificar una variable produzca un cambio causal en el incumplimiento. En consecuencia, la PFI se utiliza como complemento de las métricas de desempeño y del análisis exploratorio, no como prueba causal de las hipótesis planteadas.
 
 ![Figura 6: Importancia de variables mediante Permutación (PFI) sobre el modelo MLP en el conjunto de prueba.](../reports/figures/pd/fig6_interpretabilidad_pfi.png)
-**Figura 6.** *Importancia de variables por permutación (PFI), medida como la caída media en ROC-AUC ($\Delta \text{AUC}$), para las 12 variables principales del MLP en el conjunto de prueba.*
+**Figura 6.** *Importancia de variables por permutación (PFI), medida como la caída media en ROC-AUC ($\Delta \text{AUC}$), para las 12 variables principales del MLP en el conjunto de prueba. Se muestra también el PFI de la regresión logística.*
 *Fuente:* Elaboración propia mediante `scripts/make_figures.py` a partir de `reports/tables/pd/feature_importance_pd.csv`.
 
 **Contraste de los resultados con las hipótesis de la Sección 3.3 (a partir de la Figura 1, la Tabla 5 y la Figura 6):**
@@ -593,6 +597,14 @@ Equivalentes en el `Makefile`: `lgd`, `search-lgd`, `seeds-lgd`, `el`, `figures-
 3. **Umbral de Decisión y Consideraciones de Negocio:** El umbral que maximiza la separación entre las distribuciones de probabilidades de buenos y malos pagadores puede utilizarse como referencia para analizar la capacidad discriminativa del modelo. En la curva KS generada por `scripts/make_figures.py`, dicho umbral es aproximadamente $\tau^* = 0.216$, equivalente a un puntaje de alrededor de 552 puntos en la escala de la *scorecard*. Sin embargo, este valor no debe interpretarse automáticamente como el punto de corte óptimo para aprobar o rechazar solicitudes: el estadístico KS mide separación entre distribuciones, pero no incorpora por sí solo los ingresos por intereses, las pérdidas por incumplimiento ni los demás costes de la decisión. Para definir una política operativa, sería necesario especificar y justificar los costes y beneficios relevantes, incluida la pérdida dado el incumplimiento (LGD), y evaluar la decisión resultante en datos apropiados.
 4. **Censura y evaluación temporal en la LGD (Parte 2):** La LGD observada crece con el año de originación (0.92 en entrenamiento, 0.98 en prueba) porque la cobranza de los créditos recientes aún no termina. Por eso una predicción constante de 1 tiene en prueba un error menor (MAE 0.0193, RMSE 0.0732) que los modelos entrenados con el pasado (RMSE 0.0885 del MLP-C), y lo contrario ocurre en validación. Las comparaciones entre modelos de la Sección 1P son válidas bajo el mismo desplazamiento, pero no demuestran una LGD bien estimada en la cohorte de 2015.
 5. **Coherencia entre PD y LGD en la pérdida esperada:** La pérdida esperada total supera 1.65 veces la realizada (EAD B). La causa principal es que la PD de la Parte 1 trata como "malos" a `Charged Off`, `Default` y `Late (31-120)`, mientras que la pérdida realizada solo observa castigados (PD media predicha 0.225 frente a 0.108 observada en el subconjunto evaluado). Alinear la definición de incumplimiento entre PD y LGD es más importante que mejorar la red.
+6. **Qué aportó la red en la Parte 1:** La red mejoró las cuatro métricas, pero poco: el AUC sube 0,0058, mayor que la desviación entre semillas (0,0014), aunque pequeño. A cambio, pasa de 39 a 4.801 parámetros y de 0,39 s a 23,6 s de entrenamiento, y es más difícil de interpretar: la logística se lee directo por sus coeficientes y la red solo con PFI. En ambos modelos int_rate es la variable más importante.
+
+7. **Aprendizajes de la Parte 1:**
+   * Probar con una sola semilla puede engañar; 30 semillas dan una idea de cuánto varía la métrica.
+   * int_rate pesa mucho porque ya trae la evaluación de riesgo de la plataforma.
+   * La prueba son pocos créditos de 2015 (7,3 % de lo originado), con más créditos a 60 meses, así que su AUC no es del todo comparable con validación.
+   * La tasa base de incumplimiento cambia entre particiones (20,5 % a 27,1 % a 25,5 %), por eso la calibración hay que revisarla aparte.
+   * Para este problema tabular, un modelo simple casi alcanza a la red.
 
 ---
 

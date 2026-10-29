@@ -17,7 +17,7 @@ En cumplimiento de los lineamientos de evaluación del curso, se incluyen los en
 
 | # | Integrante | Rol / módulos principales desarrollados | Video |
 | :-: | :--- | :--- | :---: |
-| 1 | Salomé Murillo Gaviria | Pipeline de datos PD, evaluación *Out-of-Time*, hipótesis de riesgo, interpretabilidad PFI y reporte web. | [Video de contribución 1](https://youtube.com/REEMPLAZAR_LINK_1) |
+| 1 | Salomé Murillo Gaviria | Scorecard, interpretabilidad por importancia por permutación, evaluación con búsqueda de hiperparámetros y 30 semillas, y reporte web. | [Video de contribución 1](https://youtu.be/iFEk_I-LNzQ) |
 | 2 | Nicolás David Zambrano Murcia | Arquitectura neuronal MLP y estabilidad en 30 semillas, derivación de *scorecard*, modelamiento LGD y aplicación. | [Video de contribución 2](https://youtu.be/e_y7hSoHltw) |
 | 3 | Andrés Pérez Cano | Construcción del objetivo LGD (con variante `--include-default`), carga de datos, configuración y métricas de distribución de la Parte 2, y cálculo de la pérdida esperada PD × LGD × EAD. | [Video de contribución 3](https://www.youtube.com/watch?v=WwKmzS14pFE) |
 | 4 | Oky Ruiz de la Rosa | Pérdida esperada, análisis de sensibilidad LGD, pruebas unitarias y cacería de alucinaciones. | [Video de contribución 4](https://youtube.com/REEMPLAZAR_LINK_4) |
