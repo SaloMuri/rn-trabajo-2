@@ -20,7 +20,7 @@ En cumplimiento de los lineamientos de evaluación del curso, se incluyen los en
 | 1 | Salomé Murillo Gaviria | Scorecard, interpretabilidad por importancia por permutación, evaluación con búsqueda de hiperparámetros y 30 semillas, y reporte web. | [Video de contribución 1](https://youtu.be/iFEk_I-LNzQ) |
 | 2 | Nicolás David Zambrano Murcia | Arquitectura neuronal MLP y estabilidad en 30 semillas, derivación de *scorecard*, modelamiento LGD y aplicación. | [Video de contribución 2](https://youtu.be/e_y7hSoHltw) |
 | 3 | Andrés Pérez Cano | Construcción del objetivo LGD (con variante `--include-default`), carga de datos, configuración y métricas de distribución de la Parte 2, y cálculo de la pérdida esperada PD × LGD × EAD. | [Video de contribución 3](https://www.youtube.com/watch?v=WwKmzS14pFE) |
-| 4 | Oky Ruiz de la Rosa | Pérdida esperada, análisis de sensibilidad LGD, pruebas unitarias y cacería de alucinaciones. | [Video de contribución 4](https://youtube.com/REEMPLAZAR_LINK_4)|
+| 4 | Oky Ruiz de la Rosa | Modelos de LGD, búsqueda aleatoria de hiperparámetros y evaluación con 30 semillas, interpretabilidad y figuras de la LGD, pruebas unitarias, sección 5 del reporte y cacería de alucinaciones. | [Video de contribución 4](https://youtu.be/Z4BD-MZIVxs?si=Lhep0fGSEdjl7qKP) |
 
 ## Qué hace el proyecto
 
