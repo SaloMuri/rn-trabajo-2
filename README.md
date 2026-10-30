@@ -7,7 +7,7 @@ Trabajo 2 de *Redes neuronales y algoritmos bioinspirados* (Universidad Nacional
 | Repositorio | https://github.com/SaloMuri/rn-trabajo-2 |
 | Reporte técnico | [`blog/index.html`](https://salomuri.github.io/rn-trabajo-2/blog/) (versión web, se abre en el navegador) y [`blog/reporte.md`](blog/reporte.md) (fuente) |
 | Aplicación web | https://rn-trabajo-2-app.streamlit.app |
-| Video promocional | (pendiente) |
+| Video promocional | https://youtu.be/6X9DqmUSZJs |
 
 **Integrantes:** Salome Murillo Gaviria, Nicolas David Zambrano Murcia, Oky Ruiz De La Rosa y Andrés Pérez Cano.
 
@@ -18,7 +18,7 @@ En cumplimiento de los lineamientos de evaluación del curso, se incluyen los en
 | # | Integrante | Rol / módulos principales desarrollados | Video |
 | :-: | :--- | :--- | :---: |
 | 1 | Salomé Murillo Gaviria | Scorecard, interpretabilidad por importancia por permutación, evaluación con búsqueda de hiperparámetros y 30 semillas, y reporte web. | [Video de contribución 1](https://youtu.be/iFEk_I-LNzQ) |
-| 2 | Nicolás David Zambrano Murcia | Arquitectura neuronal MLP y estabilidad en 30 semillas, derivación de *scorecard*, modelamiento LGD y aplicación. | [Video de contribución 2](https://youtu.be/e_y7hSoHltw) |
+| 2 | Nicolás David Zambrano Murcia | Configuración inicial del proyecto y preparación de los datos, tratamiento y preprocesamiento de la información, desarrollo de scripts de inicialización y apoyo en la implementación de la arquitectura neuronal MLP. Documentación y análisis de la cacería de la alucinación. | [Video de contribución 2](https://youtu.be/e_y7hSoHltw) |
 | 3 | Andrés Pérez Cano | Construcción del objetivo LGD (con variante `--include-default`), carga de datos, configuración y métricas de distribución de la Parte 2, y cálculo de la pérdida esperada PD × LGD × EAD. | [Video de contribución 3](https://www.youtube.com/watch?v=WwKmzS14pFE) |
 | 4 | Oky Ruiz de la Rosa | Modelos de LGD, búsqueda aleatoria de hiperparámetros y evaluación con 30 semillas, interpretabilidad y figuras de la LGD, pruebas unitarias, sección 5 del reporte y cacería de alucinaciones. | [Video de contribución 4](https://youtu.be/Z4BD-MZIVxs?si=Lhep0fGSEdjl7qKP) |
 
@@ -76,7 +76,7 @@ Para comprobar la instalación:
 pytest -q
 ```
 
-Deben pasar las 20 pruebas.
+Deben pasar las pruebas.
 
 ## Datos
 
@@ -94,53 +94,75 @@ python src/creditrisk/data/build_lgd_target.py --include-default   # variante co
 
 ## Ejecución: un comando por experimento
 
-Cada experimento se ejecuta con un comando desde la raíz del proyecto. Con `make` (Linux y macOS) o con el comando de Python (cualquier sistema, incluido Windows sin `make`):
+Cada experimento se ejecuta con un comando desde la raíz del proyecto. Con `make` (Linux y macOS) o con el comando de Python (cualquier sistema, incluido Windows sin `make`).
 
 | Experimento | `make` | Comando de Python |
 |---|---|---|
-| Parte 1: PD (referencia y MLP) | `make pd` | `python scripts/run_pd.py` |
-| Parte 1: búsqueda de hiperparámetros | `make search` | `python scripts/run_search.py` |
-| Parte 1: 30 semillas | `make seeds` | `python scripts/run_seeds.py` |
-| Parte 1: figuras | `make figures` | `python scripts/make_figures.py` |
-| Parte 2: LGD (referencias y MLP) | `make lgd` | `python scripts/run_lgd.py` |
-| Parte 2: LGD con `Default` (sensibilidad) | `make lgd-sens` | `python scripts/run_lgd.py --population with_default` |
-| Parte 2: búsqueda de hiperparámetros | `make search-lgd` | `python scripts/run_search_lgd.py` |
-| Parte 2: 30 semillas | `make seeds-lgd` | `python scripts/run_seeds_lgd.py` |
-| Parte 2: pérdida esperada | `make el` | `python scripts/run_expected_loss.py` |
-| Parte 2: figuras e interpretabilidad | `make figures-lgd` | `python scripts/make_figures_lgd.py` |
-| Parte 1: demo (muestra pequeña) | `make demo` | `python scripts/run_pd.py --config configs/demo.yaml` |
-| Parte 2: demo completa (modelos, pérdida esperada y figuras) | `make demo-lgd` | `python scripts/run_lgd.py --demo` y luego `python scripts/run_expected_loss.py` y `python scripts/make_figures_lgd.py` |
+| Construir datos desde el CSV original | `make data` | `python -m creditrisk.data.build_dataset` |
+| **Parte 1: PD** | | |
+| Entrenamiento (referencia LR + MLP + Scorecard) | `make pd` | `python scripts/run_pd.py` |
+| Búsqueda de hiperparámetros | `make search` | `python scripts/run_search.py` |
+| Estabilidad en 30 semillas e interpretabilidad | `make seeds` | `python scripts/run_seeds.py` |
+| Análisis de censura de etiquetas | `make censura` | `python scripts/censura_etiquetas.py` |
+| Regenerar figuras del reporte | `make figures` | `python scripts/make_figures.py` |
+| **Parte 2: LGD y pérdida esperada** | | |
+| Entrenamiento (referencias y MLP) | `make lgd` | `python scripts/run_lgd.py` |
+| LGD con `Default` (sensibilidad) | `make lgd-sens` | `python scripts/run_lgd.py --population with_default` |
+| Búsqueda de hiperparámetros | `make search-lgd` | `python scripts/run_search_lgd.py` |
+| Estabilidad en 30 semillas | `make seeds-lgd` | `python scripts/run_seeds_lgd.py` |
+| Pérdida esperada | `make el` | `python scripts/run_expected_loss.py` |
+| Figuras e interpretabilidad | `make figures-lgd` | `python scripts/make_figures_lgd.py` |
+| **Demostraciones** | | |
+| Parte 1: PD con muestra pequeña | `make demo` | `python scripts/run_pd.py --config configs/demo.yaml` |
+| Parte 2: LGD con muestra pequeña | `make lgd-demo` | `python scripts/run_lgd.py --demo` |
 | Aplicación web | `make app` | `streamlit run app/app.py` |
-| Pruebas | `make test` | `pytest -q` |
+| Pruebas automatizadas | `make test` | `pytest -q` |
 
-Orden para reproducir la Parte 2 completa:
+## Orden para reproducir la Parte 1 completa
 
 ```bash
-python scripts/run_lgd.py            # 1. referencias y MLP con la configuración por defecto
-python scripts/run_search_lgd.py     # 2. búsqueda (escribe configs/lgd_best.yaml)
-python scripts/run_lgd.py --best     # 3. modelos finales con la mejor configuración
-python scripts/run_seeds_lgd.py      # 4. 30 semillas
-python scripts/run_expected_loss.py  # 5. pérdida esperada (necesita los modelos de PD de la Parte 1)
-python scripts/make_figures_lgd.py   # 6. figuras e interpretabilidad
+python -m creditrisk.data.build_dataset  # 1. Construcción de datos procesados
+python scripts/censura_etiquetas.py      # 2. Análisis de censura de etiquetas
+python scripts/run_pd.py                 # 3. Entrenamiento de referencia LR y MLP, y Scorecard
+python scripts/run_search.py             # 4. Búsqueda de hiperparámetros
+python scripts/run_seeds.py              # 5. Evaluación con 30 semillas e interpretabilidad
+python scripts/make_figures.py           # 6. Generación de figuras del reporte
 ```
 
-Los parámetros se cambian sin editar código, con los archivos de `configs/` o con `--set ruta=valor`; por ejemplo, `python scripts/run_lgd.py --set mlp.epochs=30`.
+## Orden para reproducir la Parte 2 completa
+
+```bash
+python scripts/run_lgd.py            # 1. Referencias y MLP con la configuración por defecto
+python scripts/run_search_lgd.py     # 2. Búsqueda (escribe configs/lgd_best.yaml)
+python scripts/run_lgd.py --best     # 3. Modelos finales con la mejor configuración
+python scripts/run_seeds_lgd.py      # 4. 30 semillas
+python scripts/run_expected_loss.py  # 5. Pérdida esperada (necesita los modelos de PD de la Parte 1)
+python scripts/make_figures_lgd.py   # 6. Figuras e interpretabilidad
+```
+
+Los parámetros se cambian sin editar código, con los archivos de `configs/` o con `--set ruta=valor`; por ejemplo:
+
+```bash
+python scripts/run_lgd.py --set mlp.epochs=30
+```
 
 ### Modo demostración (menos de 2 minutos)
 
 ```bash
-make demo        # Parte 1: PD con una muestra pequeña (unos 24 s)
-make demo-lgd    # Parte 2: modelos de LGD, pérdida esperada y figuras (unos 30 s)
+make demo       # Parte 1: PD con una muestra pequeña
+make demo-lgd   # Parte 2: modelos de LGD, pérdida esperada y figuras
 ```
 
 Sin `make`, los comandos equivalentes son:
 
 ```bash
-python scripts/run_pd.py --config configs/demo.yaml    # Parte 1: PD con una muestra pequeña
-python scripts/run_lgd.py --demo                       # Parte 2: modelos de LGD con una muestra pequeña
-python scripts/run_expected_loss.py                    # Parte 2: pérdida esperada con los modelos finales
-python scripts/make_figures_lgd.py                     # Parte 2: figuras e interpretabilidad
+python scripts/run_pd.py --config configs/demo.yaml
+python scripts/run_lgd.py --demo
+python scripts/run_expected_loss.py
+python scripts/make_figures_lgd.py
 ```
+
+Las demostraciones utilizan configuraciones reducidas para facilitar la ejecución en vivo. No sustituyen los experimentos completos ni los resultados reportados.
 
 Los tiempos son de una prueba en un entorno Linux en la nube (PD unos 24 segundos; LGD, pérdida esperada y figuras unos 30 segundos en total). Las demos de los modelos se guardan en carpetas aparte (`models/lgd_demo/`, `reports/tables/lgd_demo/`, `reports/tables/pd/comparison_demo.csv`) y no sobrescriben los resultados completos. Con la muestra reducida, las cifras de `run_lgd.py --demo` son distintas de las del reporte; la pérdida esperada y las figuras usan los modelos finales, por lo que sus cifras coinciden con las del reporte.
 

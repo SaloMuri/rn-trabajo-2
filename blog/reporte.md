@@ -6,7 +6,7 @@
 
 **Autores:** Salome Murillo Gaviria, Nicolas David Zambrano Murcia, Oky Ruiz De La Rosa, Andrés Pérez Cano
 
-**Enlaces del Proyecto:** [Repositorio en GitHub](https://github.com/SaloMuri/rn-trabajo-2) · [Aplicación Web Interactiva (Scorecard)](https://rn-trabajo-2-app.streamlit.app) · [Video Promocional](#)
+**Enlaces del Proyecto:** [Repositorio en GitHub](https://github.com/SaloMuri/rn-trabajo-2) · [Aplicación Web Interactiva (Scorecard)](https://rn-trabajo-2-app.streamlit.app) · [Video Promocional](https://youtu.be/6X9DqmUSZJs)
 
 
 ---
