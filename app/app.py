@@ -82,7 +82,7 @@ def main():
     st.title("🏦 Simulador de Riesgo Crediticio y Scorecard (Parte 1 — PD)")
     st.markdown(
         "**Trabajo 2 — Redes Neuronales y Algoritmos Bioinspirados (UNAL Facultad de Minas)**  \n"
-        "🔗 [Reporte Técnico (Blog)](https://salomuri.github.io/rn-trabajo-2/blog/) · 🎥 [Video Promocional](#) · 💻 [Repositorio GitHub](https://github.com/SaloMuri/rn-trabajo-2.git)"
+        "🔗 [Reporte Técnico (Blog)](https://salomuri.github.io/rn-trabajo-2/blog/) · 🎥 [Video Promocional](https://youtu.be/6X9DqmUSZJs) · 💻 [Repositorio GitHub](https://github.com/SaloMuri/rn-trabajo-2.git)"
     )
     st.divider()
 
